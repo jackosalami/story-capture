@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --color-paper: #fdfaf3;
+  --color-ink: #1a1a1a;
+  --color-warm: #d97706;
+  --color-warm-soft: #fef3c7;
+  --color-record: #dc2626;
+  --color-record-soft: #fee2e2;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  /* Senior-friendly base: large text, tight letter-spacing, generous line height */
+  font-size: 18px;
+  line-height: 1.55;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button {
+  font-family: inherit;
+}
