@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useSettings } from "../store/settings";
 import { useNav } from "../store/nav";
 import { validateApiKey } from "../api/openai";
+import { downloadExport } from "../lib/exportJson";
 
 export function SettingsScreen() {
   const settings = useSettings();
@@ -88,6 +89,32 @@ export function SettingsScreen() {
         </a>
         . La clave se guarda solo en este navegador y nunca se envía a nadie más que a OpenAI.
       </p>
+
+      {settings.hasApiKey() && (
+        <section className="mt-12 border-t border-ink/10 pt-8">
+          <h2 className="text-lg font-medium text-ink mb-2">Exportar todo</h2>
+          <p className="text-sm text-ink/60 mb-4">
+            Descarga un archivo JSON con todas tus historias, personajes, transcripciones
+            y resúmenes. Sirve como copia de seguridad y como punto de partida para imprimir el libro.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => downloadExport({ includeAudio: false })}
+              className="rounded-lg border border-ink/20 px-4 py-2 text-sm text-ink hover:border-warm/60"
+            >
+              Descargar JSON (sin audio)
+            </button>
+            <button
+              type="button"
+              onClick={() => downloadExport({ includeAudio: true })}
+              className="rounded-lg border border-ink/20 px-4 py-2 text-sm text-ink hover:border-warm/60"
+            >
+              Descargar JSON con audio
+            </button>
+          </div>
+        </section>
+      )}
     </div>
   );
 }

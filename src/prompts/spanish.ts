@@ -40,3 +40,20 @@ export function buildSummaryUserPrompt(accumulatedTranscript: string): string {
 ${accumulatedTranscript}
 ---`;
 }
+
+export const TITLE_SYSTEM_PROMPT = `Eres una asistente que pone títulos a historias en español. Tu única tarea es leer un fragmento del inicio de una historia oral y proponer un título corto en español.
+
+Reglas:
+- Entre 3 y 7 palabras.
+- En español natural, no académico.
+- Sin comillas, sin punto final, sin prefijos como "Título:".
+- Captura el corazón de la historia, no un resumen literal.
+- Si la historia menciona un lugar o una persona importante, puedes incluirlos.`;
+
+export function buildTitleUserPrompt(firstSegment: string): string {
+  return `Propón un título corto en español para esta historia. Solo el título, nada más.
+
+---
+${firstSegment}
+---`;
+}

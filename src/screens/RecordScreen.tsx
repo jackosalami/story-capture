@@ -10,21 +10,21 @@ import {
   listSegments,
   setSegmentFollowUp,
 } from "../db/sessions";
+import { getStory, updateStory } from "../db/stories";
+import { getCharactersByIds } from "../db/characters";
+import type { Story, Character } from "../db/types";
 import { chat, transcribe } from "../api/openai";
 import {
   FOLLOW_UP_SYSTEM_PROMPT,
   SESSION_SUMMARY_SYSTEM_PROMPT,
+  TITLE_SYSTEM_PROMPT,
   buildFollowUpUserPrompt,
   buildSummaryUserPrompt,
+  buildTitleUserPrompt,
 } from "../prompts/spanish";
 import { formatLongDate } from "../lib/format";
 
-type Phase =
-  | "idle" // not recording, waiting for the user
-  | "recording" // mic active
-  | "processing" // transcribing + generating follow-up
-  | "ending" // generating session summary
-  | "done";
+type Phase = "idle" | "recording" | "processing" | "ending" | "done";
 
 interface SegmentView {
   id: string;
@@ -43,6 +43,8 @@ export function RecordScreen({ sessionId }: { sessionId: string }) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [segments, setSegments] = useState<SegmentView[]>([]);
   const [sessionDate, setSessionDate] = useState<string | null>(null);
+  const [story, setStory] = useState<Story | null>(null);
+  const [characters, setCharacters] = useState<Character[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -50,8 +52,13 @@ export function RecordScreen({ sessionId }: { sessionId: string }) {
     (async () => {
       const s = await getSession(sessionId);
       const segs = await listSegments(sessionId);
+      const storyId = s?.storyId ?? null;
+      const story = storyId ? await getStory(storyId) : null;
+      const chars = story ? await getCharactersByIds(story.characterIds) : [];
       if (cancelled) return;
       setSessionDate(s?.date ?? new Date().toISOString());
+      setStory(story ?? null);
+      setCharacters(chars);
       setSegments(
         segs.map((seg) => ({
           id: seg.id,
@@ -81,7 +88,6 @@ export function RecordScreen({ sessionId }: { sessionId: string }) {
     try {
       const { blob, mimeType, durationMs } = await recorderRef.current!.stop();
 
-      // 1. Transcribe
       const transcript = await transcribe({
         model: transcribeModel,
         blob,
@@ -89,7 +95,6 @@ export function RecordScreen({ sessionId }: { sessionId: string }) {
         language: "es",
       });
 
-      // 2. Save the segment
       const segment = await appendSegment({
         sessionId,
         audioBlob: blob,
@@ -103,7 +108,7 @@ export function RecordScreen({ sessionId }: { sessionId: string }) {
         { id: segment.id, transcript, followUpQuestion: null },
       ]);
 
-      // 3. Generate a follow-up question
+      // Generate follow-up question with full session context.
       const accumulated = await getAccumulatedTranscript(sessionId);
       const question = await chat({
         model: chatModel,
@@ -118,6 +123,26 @@ export function RecordScreen({ sessionId }: { sessionId: string }) {
       setSegments((prev) =>
         prev.map((s) => (s.id === segment.id ? { ...s, followUpQuestion: question } : s)),
       );
+
+      // After the FIRST segment, suggest a title if the story doesn't have one.
+      if (story && !story.title && segments.length === 0 && transcript.trim().length > 20) {
+        try {
+          const title = await chat({
+            model: chatModel,
+            messages: [
+              { role: "system", content: TITLE_SYSTEM_PROMPT },
+              { role: "user", content: buildTitleUserPrompt(transcript) },
+            ],
+            temperature: 0.7,
+            maxTokens: 30,
+          });
+          const clean = title.replace(/^[\s"'«»]+|[\s"'«»\.]+$/g, "");
+          await updateStory(story.id, { title: clean });
+          setStory({ ...story, title: clean });
+        } catch {
+          // Title is non-essential — swallow errors.
+        }
+      }
 
       setPhase("idle");
     } catch (e) {
@@ -144,8 +169,15 @@ export function RecordScreen({ sessionId }: { sessionId: string }) {
         });
       }
       await finishSession(sessionId, summary);
+      // Also store summary on the story if it's still empty.
+      if (story && !story.summary && summary) {
+        await updateStory(story.id, { summary });
+      }
       setPhase("done");
-      setTimeout(() => go({ name: "dashboard" }), 600);
+      setTimeout(() => {
+        if (story) go({ name: "story", storyId: story.id });
+        else go({ name: "dashboard" });
+      }, 600);
     } catch (e) {
       setError(messageOf(e));
       setPhase("idle");
@@ -169,7 +201,24 @@ export function RecordScreen({ sessionId }: { sessionId: string }) {
         )}
       </header>
 
-      {/* Latest follow-up question, shown above the record button */}
+      {/* Story context strip */}
+      {story && (story.title || story.storyDate || story.location || characters.length > 0) && (
+        <div className="mb-6 rounded-xl border border-ink/10 bg-white/60 px-5 py-3">
+          {story.title && (
+            <p className="text-base font-medium text-ink">{story.title}</p>
+          )}
+          <p className="text-xs text-ink/55">
+            {[story.storyDate, story.location].filter(Boolean).join(" · ")}
+          </p>
+          {characters.length > 0 && (
+            <p className="mt-1 text-xs text-ink/55">
+              Con: {characters.map((c) => c.name).join(", ")}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Latest follow-up question */}
       {latestQuestion && phase !== "recording" && (
         <div className="mb-8 rounded-2xl bg-warm-soft border border-warm/30 px-6 py-5">
           <p className="text-xs uppercase tracking-wide text-warm font-medium mb-1">
@@ -179,7 +228,6 @@ export function RecordScreen({ sessionId }: { sessionId: string }) {
         </div>
       )}
 
-      {/* Big record button */}
       <div className="flex flex-col items-center my-10">
         {phase === "recording" ? (
           <button
@@ -235,7 +283,6 @@ export function RecordScreen({ sessionId }: { sessionId: string }) {
         </div>
       )}
 
-      {/* Accumulated transcript */}
       {segments.length > 0 && (
         <section className="mt-10">
           <h2 className="text-sm uppercase tracking-wide text-ink/50 mb-3">
@@ -251,7 +298,6 @@ export function RecordScreen({ sessionId }: { sessionId: string }) {
         </section>
       )}
 
-      {/* End session */}
       {segments.length > 0 && phase === "idle" && (
         <div className="mt-12 flex justify-center">
           <button

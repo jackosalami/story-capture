@@ -1,17 +1,38 @@
 import { db, newId } from "./db";
 import type { Session, Segment } from "./types";
 
-export async function createSession(topicPrompt: string | null = null): Promise<Session> {
+export async function createSession(args: {
+  storyId?: string | null;
+  topicPrompt?: string | null;
+} = {}): Promise<Session> {
   const session: Session = {
     id: newId(),
     date: new Date().toISOString(),
     status: "recording",
     summary: null,
-    storyId: null,
-    topicPrompt,
+    storyId: args.storyId ?? null,
+    topicPrompt: args.topicPrompt ?? null,
   };
   await db.sessions.add(session);
   return session;
+}
+
+export async function migrateOrphanSessions(): Promise<void> {
+  // Wave A created sessions without a linked story. Auto-create stub stories
+  // for those so Wave B's story-centric UI has something to show.
+  const orphans = await db.sessions.filter((s) => !s.storyId).toArray();
+  if (orphans.length === 0) return;
+  const { createStory, linkSessionToStory } = await import("./stories");
+  for (const s of orphans) {
+    const story = await createStory({
+      title: "",
+      summary: s.summary ?? "",
+      sessionIds: [s.id],
+    });
+    // Use the session's date as the story's createdAt so chronology stays sensible.
+    await db.stories.update(story.id, { createdAt: s.date });
+    await linkSessionToStory(story.id, s.id);
+  }
 }
 
 export async function appendSegment(args: {
