@@ -26,34 +26,52 @@ const DEFAULTS: CharacterDefault[] = [
     matchName: (n) => n.trim().toLowerCase() === "cami",
     skipIfMentions: ["no-override"],
     canonicalVisual:
-      "A 4-year-old girl. WHITE / pale-ivory skin (never tan, never brown, never darker). " +
+      "A 2-YEAR-OLD TODDLER GIRL — very young, clearly a toddler, NEVER an older child. " +
+      "WHITE / pale-ivory skin (never tan, never brown, never darker). " +
+      "TODDLER PROPORTIONS (mandatory): very small body, big round head relative to a tiny chubby toddler body, " +
+      "short little arms and legs, slightly bowed toddler stance, takes small wobbly steps. " +
+      "She is ALWAYS the smallest and youngest in any scene with other characters. " +
+      "When standing next to her 6-year-old brother Noah, the top of Cami's head reaches roughly Noah's chest level — NEVER higher. " +
       "Hair: LIGHT CARAMEL-BROWN, STRAIGHT and smooth (never curly, never wavy, never dark), " +
-      "parted in the middle and tied in TWO short side pigtails — Mei Kusakabe (My Neighbor Totoro) hairstyle, identical in every image. " +
-      "Round face, rosy cheeks, big dark-brown almond eyes, small button nose. " +
-      "Always wears: a pale-yellow short-sleeved cotton blouse with a small white peter-pan collar, " +
-      "navy-blue denim shorts above the knees, white folded ankle socks, off-white canvas slip-on shoes. " +
-      "Outfit identical in every scene. Sturdy curious posture.",
+      "tied in TWO short little side pigtails — Mei Kusakabe (My Neighbor Totoro) hairstyle, identical in every image. " +
+      "FACE (very young toddler): perfectly round chubby toddler face, fat baby cheeks, tiny button nose, big dark-brown almond eyes, " +
+      "tiny rosebud mouth. Pure 2-year-old toddler features — NEVER an older-child face. " +
+      "OUTFIT (identical every scene — Mei's iconic look): a sunny pale-yellow short-sleeved summer DRESS with a small embroidered flower or fruit detail on the chest, " +
+      "bare chubby toddler legs, small white folded ankle socks, soft off-white canvas toddler shoes. " +
+      "POSTURE & VIBE: curious wobbly toddler, often leaning slightly forward with both little hands together or pointing, big curious eyes, " +
+      "pure 2-year-old toddler energy. Visual reference: Mei Kusakabe in Studio Ghibli's 'My Neighbor Totoro'.",
     negatives: [
-      "Cami's hair is NEVER curly, NEVER wavy, NEVER dark brown or black — always LIGHT caramel-brown and STRAIGHT.",
+      "Cami's age is 2 — she is a TODDLER. NEVER draw her as an older child, NEVER as a 4/5/6-year-old, NEVER with school-age proportions.",
+      "Cami's face is ALWAYS a chubby round toddler face with fat baby cheeks. NEVER an older-child face, NEVER mature features.",
+      "Cami is ALWAYS clearly shorter than 6-year-old Noah — the top of her head reaches roughly his chest, never higher. NEVER the same height.",
+      "Cami's hair is NEVER curly, NEVER wavy, NEVER dark brown or black — always LIGHT caramel-brown and STRAIGHT in TWO short side pigtails.",
       "Cami's hair is NEVER one ponytail, NEVER loose, NEVER braids — always TWO short side pigtails.",
       "Cami's skin is NEVER tan, NEVER brown, NEVER olive — always pale ivory white.",
-      "Cami NEVER wears a dress, NEVER pink, NEVER changes outfit — always the pale-yellow blouse + navy shorts + canvas shoes.",
+      "Cami's outfit is ALWAYS a pale-yellow short-sleeved summer DRESS. NEVER a blouse+shorts combo. NEVER pink, NEVER another color.",
+      "Cami never wears pants or shorts — always the dress with bare chubby toddler legs.",
     ],
   },
   {
     matchName: (n) => n.trim().toLowerCase() === "noah",
     skipIfMentions: ["no-override"],
     canonicalVisual:
-      "A 5-year-old boy. WHITE / pale-ivory skin (never tan, never brown). " +
-      "Hair: DARK ESPRESSO-BROWN, STRAIGHT, short and slightly tousled, falling just above the eyebrows (clearly darker than Cami's caramel hair). " +
-      "Warm brown eyes, small nose, a sprinkle of tiny freckles across the nose bridge, easy smile. " +
-      "Always wears: a soft sage-green short-sleeved cotton t-shirt with a tiny embroidered yellow star on the left chest, " +
+      "A 6-YEAR-OLD BOY — a school-age kid, clearly older and visibly TALLER than his 2-year-old toddler sister Cami. " +
+      "WHITE / pale-ivory skin (never tan, never brown). " +
+      "PROPORTIONS (mandatory): a typical 6-year-old build — slim, active, school-age body with normal kid proportions (NOT toddler-chubby, NOT a tiny baby body). " +
+      "When standing next to 2-year-old Cami, Noah is CLEARLY TALLER — by at least a head and a half. Cami's head reaches roughly Noah's chest level. " +
+      "Noah is the visibly older, taller, slimmer one of the two. " +
+      "Hair: DARK ESPRESSO-BROWN (rich coffee-brown, clearly darker than Cami's caramel hair), STRAIGHT, short and slightly tousled, falling just above the eyebrows. " +
+      "FACE: school-age kid face (not chubby toddler face) — slimmer than Cami's, warm brown eyes, small nose, easy smile, a sprinkle of tiny freckles across the nose bridge. " +
+      "OUTFIT (identical every scene): a soft sage-green short-sleeved cotton t-shirt with a tiny embroidered yellow star on the left chest, " +
       "navy-blue cotton shorts above the knees, white ankle socks, small brown leather two-strap sandals. " +
-      "Outfit identical in every scene.",
+      "POSTURE & VIBE: gentle and curious older-brother energy — stops to look closer, points things out to Cami, smiles a lot, often acts as her protector.",
     negatives: [
-      "Noah's hair is NEVER light, NEVER blonde, NEVER red — always dark espresso-brown and straight.",
+      "Noah's age is 6 — a school-age kid, NEVER a toddler. NEVER chubby toddler proportions, NEVER a baby face.",
+      "Noah is ALWAYS clearly taller than Cami when they appear together — by at least a head and a half. NEVER the same height as Cami, NEVER shorter.",
+      "Noah's hair is NEVER light, NEVER blonde, NEVER red — always dark espresso-brown and straight, clearly darker than Cami's hair.",
       "Noah's skin is NEVER tan, NEVER brown — always pale ivory white.",
-      "Noah NEVER wears closed shoes, NEVER a flowered shirt, NEVER a different color — always the sage-green star t-shirt, navy shorts, brown sandals. Same outfit every single scene.",
+      "Noah's outfit is NEVER different — always the sage-green star t-shirt, navy shorts, brown leather sandals. Same outfit every single scene.",
+      "Noah NEVER wears closed shoes — always the brown leather two-strap sandals.",
     ],
   },
   {
