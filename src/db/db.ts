@@ -7,6 +7,7 @@ import type {
   Chapter,
   KidCharacter,
   KidStory,
+  MemoirBook,
 } from "./types";
 
 class StoryCaptureDB extends Dexie {
@@ -17,6 +18,7 @@ class StoryCaptureDB extends Dexie {
   chapters!: EntityTable<Chapter, "id">;
   kidCharacters!: EntityTable<KidCharacter, "id">;
   kidStories!: EntityTable<KidStory, "id">;
+  memoirBooks!: EntityTable<MemoirBook, "id">;
 
   constructor() {
     super("story-capture");
@@ -27,7 +29,6 @@ class StoryCaptureDB extends Dexie {
       characters: "id, name",
       chapters: "id, createdAt",
     });
-    // v2: add kid-stories workspace (separate from memoir entities above)
     this.version(2).stores({
       sessions: "id, date, status, storyId",
       segments: "id, sessionId, order, timestamp",
@@ -36,6 +37,17 @@ class StoryCaptureDB extends Dexie {
       chapters: "id, createdAt",
       kidCharacters: "id, name, createdAt",
       kidStories: "id, createdAt",
+    });
+    // v3: add MemoirBook + bookId index on sessions/stories (Wave C)
+    this.version(3).stores({
+      sessions: "id, date, status, storyId, bookId",
+      segments: "id, sessionId, order, timestamp",
+      stories: "id, createdAt, storyDate, bookId",
+      characters: "id, name",
+      chapters: "id, createdAt",
+      kidCharacters: "id, name, createdAt",
+      kidStories: "id, createdAt",
+      memoirBooks: "id, isActive, createdAt",
     });
   }
 }

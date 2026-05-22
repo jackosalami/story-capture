@@ -12,7 +12,13 @@ export interface StoryDraft {
   sessionIds?: string[];
 }
 
-export async function createStory(draft: StoryDraft = {}): Promise<Story> {
+export async function createStory(draft: StoryDraft & { bookId?: string } = {}): Promise<Story> {
+  let bookId = draft.bookId;
+  if (!bookId) {
+    const { getActiveBook } = await import("./memoirBooks");
+    const active = await getActiveBook();
+    bookId = active?.id;
+  }
   const story: Story = {
     id: newId(),
     title: draft.title ?? "",
@@ -24,6 +30,7 @@ export async function createStory(draft: StoryDraft = {}): Promise<Story> {
     characterIds: draft.characterIds ?? [],
     sessionIds: draft.sessionIds ?? [],
     createdAt: new Date().toISOString(),
+    bookId,
   };
   await db.stories.add(story);
   return story;

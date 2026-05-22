@@ -13,6 +13,7 @@ export interface Session {
   summary: string | null; // AI-generated on end
   storyId: ID | null; // linked after story extraction (Wave B)
   topicPrompt: string | null; // optional: which topic-library prompt seeded this session
+  bookId?: ID;        // which MemoirBook this session belongs to (Wave C)
 }
 
 export interface Segment {
@@ -43,6 +44,28 @@ export interface Story {
   // Names mentioned in transcripts but not yet promoted to Character entities.
   // Populated by AI metadata extraction; admin can convert these to characters later.
   mentionedPeople?: string[];
+  bookId?: ID; // which MemoirBook this story belongs to (Wave C)
+}
+
+// --- Memoir-side: Books (Wave C) ---
+//
+// A MemoirBook is a top-level container for a coherent group of stories
+// (e.g. "Mi Infancia", "Cuando conocí a Pepe"). Stories and Sessions live
+// inside exactly one book. Exactly one book is marked active at a time;
+// new recordings auto-attach to the active book.
+
+export interface MemoirBook {
+  id: ID;
+  title: string;
+  subtitle: string;       // e.g. "1955–1970" or "Los años en Salamanca"
+  description: string;    // longer prose intro shown inside the book
+  era: string;            // tag for chronology — free text like "Childhood", "Marriage"
+  dedication: string;
+  coverImage?: Blob;      // optional cover photo
+  coverMimeType?: string;
+  isActive: boolean;      // exactly one MemoirBook is active at a time
+  status: "in-progress" | "ready" | "printed";
+  createdAt: string;
 }
 
 export interface Character {

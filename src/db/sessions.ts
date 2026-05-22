@@ -4,7 +4,16 @@ import type { Session, Segment } from "./types";
 export async function createSession(args: {
   storyId?: string | null;
   topicPrompt?: string | null;
+  bookId?: string;
 } = {}): Promise<Session> {
+  // If no explicit bookId, fall back to the active MemoirBook so new
+  // recordings auto-attach to the right book per the active-book UX.
+  let bookId = args.bookId;
+  if (!bookId) {
+    const { getActiveBook } = await import("./memoirBooks");
+    const active = await getActiveBook();
+    bookId = active?.id;
+  }
   const session: Session = {
     id: newId(),
     date: new Date().toISOString(),
@@ -12,6 +21,7 @@ export async function createSession(args: {
     summary: null,
     storyId: args.storyId ?? null,
     topicPrompt: args.topicPrompt ?? null,
+    bookId,
   };
   await db.sessions.add(session);
   return session;

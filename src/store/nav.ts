@@ -6,7 +6,8 @@ import { create } from "zustand";
 export type Workspace = "memoir" | "kids";
 
 export type Screen =
-  | { name: "dashboard" } // memoir dashboard
+  | { name: "dashboard" } // memoir bookshelf (Wave C)
+  | { name: "book"; bookId: string } // inside one memoir book
   | { name: "settings" }
   | { name: "walkthrough" }
   | { name: "topics" }

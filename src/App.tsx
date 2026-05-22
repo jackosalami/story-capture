@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useNav, workspaceOf } from "./store/nav";
 import { useSettings } from "./store/settings";
 import { DashboardScreen } from "./screens/DashboardScreen";
+import { BookDetailScreen } from "./screens/BookDetailScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { RecordScreen } from "./screens/RecordScreen";
 import { StorySetupScreen } from "./screens/StorySetupScreen";
@@ -47,6 +48,8 @@ function App() {
   switch (screen.name) {
     case "dashboard":
       return <DashboardScreen />;
+    case "book":
+      return <BookDetailScreen bookId={screen.bookId} />;
     case "topics":
       return <TopicLibraryScreen />;
     case "story-setup":
