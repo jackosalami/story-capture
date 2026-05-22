@@ -98,4 +98,22 @@ export interface KidStory {
   content: string; // generated Spanish prose
   editHistory: { at: string; content: string }[];
   createdAt: string;
+  imagePrompts?: KidStoryImagePrompts;
+}
+
+export interface KidStoryImagePromptScene {
+  momentTitle: string; // Spanish — display label
+  prompt: string;      // English — for Gemini Nano Banana
+}
+
+export interface KidStoryImagePromptCharacter {
+  name: string;
+  description: string; // detailed visual description (repeated in every scene the character appears)
+}
+
+export interface KidStoryImagePrompts {
+  style: string;                              // shared visual style description applied to all scenes
+  characters: KidStoryImagePromptCharacter[]; // canonical visual definitions for continuity
+  scenes: KidStoryImagePromptScene[];          // typically 5
+  generatedAt: string;
 }

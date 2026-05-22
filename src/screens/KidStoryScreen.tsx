@@ -14,6 +14,7 @@ import {
   buildKidStorySystemPrompt,
   buildKidStoryUserPrompt,
 } from "../prompts/kidStory";
+import { generateImagePrompts } from "../lib/generateImagePrompts";
 import { Sparkle, StarMascot, avatarForKind } from "../components/Mascots";
 
 const COOKING_MESSAGES = [
@@ -35,6 +36,9 @@ export function KidStoryScreen({ kidStoryId }: { kidStoryId: string }) {
   const [regenerating, setRegenerating] = useState(false);
   const [cookingStep, setCookingStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [imagePromptsBusy, setImagePromptsBusy] = useState(false);
+  const [imagePromptsError, setImagePromptsError] = useState<string | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   async function refresh() {
     const s = await getKidStory(kidStoryId);
@@ -112,6 +116,30 @@ export function KidStoryScreen({ kidStoryId }: { kidStoryId: string }) {
     if (!confirm("¿Eliminar este cuento? No se puede deshacer.")) return;
     await deleteKidStory(kidStoryId);
     go({ name: "kids-dashboard" });
+  }
+
+  async function regenerateImagePrompts() {
+    if (!story) return;
+    setImagePromptsError(null);
+    setImagePromptsBusy(true);
+    const ok = await generateImagePrompts({ story, model: chapterModel });
+    if (!ok) {
+      setImagePromptsError(
+        "No pude generar los prompts esta vez. Inténtalo de nuevo en un momento.",
+      );
+    }
+    await refresh();
+    setImagePromptsBusy(false);
+  }
+
+  async function copyToClipboard(text: string, key: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey((k) => (k === key ? null : k)), 1500);
+    } catch {
+      // clipboard API can fail in some browsers/permissions — silent
+    }
   }
 
   if (!story) {
@@ -276,6 +304,138 @@ export function KidStoryScreen({ kidStoryId }: { kidStoryId: string }) {
           <p className="mt-4 text-xs text-night/45 text-center h-display">
             {wordCount} palabras
           </p>
+
+          {/* Image prompts for Gemini Nano Banana */}
+          <section className="mt-14">
+            <div className="flex flex-wrap items-baseline justify-between gap-3 mb-2">
+              <h2 className="h-display text-2xl text-night flex items-center gap-2">
+                <span aria-hidden>🎨</span> Imágenes del cuento
+              </h2>
+              <button
+                type="button"
+                onClick={regenerateImagePrompts}
+                disabled={imagePromptsBusy}
+                className="rounded-full bg-white/80 border border-night/10 px-3 py-1 text-xs h-display font-semibold text-night hover:bg-white shadow-sm disabled:opacity-50"
+              >
+                {imagePromptsBusy
+                  ? "Generando…"
+                  : story.imagePrompts
+                    ? "🔄 Regenerar prompts"
+                    : "✨ Generar prompts"}
+              </button>
+            </div>
+            <p className="text-sm text-night/65 mb-5">
+              Cinco prompts en inglés optimizados para Gemini Nano Banana. Cópialos uno por uno
+              y pégalos en Gemini para crear las ilustraciones del cuento. Los personajes mantienen
+              la misma apariencia en las cinco imágenes.
+            </p>
+
+            {imagePromptsError && (
+              <div className="mb-4 rounded-2xl bg-strawberry-soft border-2 border-strawberry/30 px-5 py-3 text-sm text-strawberry">
+                {imagePromptsError}
+              </div>
+            )}
+
+            {!story.imagePrompts && !imagePromptsBusy && (
+              <div className="rounded-2xl bg-white/70 border-2 border-dashed border-night/15 px-5 py-6 text-center text-night/60">
+                Todavía no hay prompts. Toca <strong>Generar prompts</strong> para que el cuento se ilustre.
+              </div>
+            )}
+
+            {story.imagePrompts && (
+              <>
+                {/* Style and characters — the canonical references repeated in every scene */}
+                <div className="mb-5 rounded-2xl bg-white border border-night/10 px-5 py-4 shadow-sm">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <p className="text-xs uppercase tracking-widest text-grape font-semibold h-display">
+                      Estilo visual (igual en las 5 imágenes)
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(story.imagePrompts!.style, "style")}
+                      className="text-xs h-display font-medium text-night/60 hover:text-grape"
+                    >
+                      {copiedKey === "style" ? "✓ Copiado" : "Copiar"}
+                    </button>
+                  </div>
+                  <p className="mt-2 text-sm text-night/85 leading-relaxed">
+                    {story.imagePrompts.style}
+                  </p>
+                </div>
+
+                {story.imagePrompts.characters.length > 0 && (
+                  <div className="mb-6">
+                    <p className="text-xs uppercase tracking-widest text-grape font-semibold h-display mb-2">
+                      Personajes (descripción fija para mantener continuidad)
+                    </p>
+                    <ul className="space-y-2">
+                      {story.imagePrompts.characters.map((c, i) => (
+                        <li
+                          key={c.name + i}
+                          className="rounded-2xl bg-white border border-night/10 px-5 py-3 shadow-sm"
+                        >
+                          <div className="flex items-baseline justify-between gap-3">
+                            <p className="h-display text-base font-semibold text-night">
+                              {c.name}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(c.description, "char-" + i)}
+                              className="text-xs h-display font-medium text-night/60 hover:text-grape"
+                            >
+                              {copiedKey === "char-" + i ? "✓ Copiado" : "Copiar"}
+                            </button>
+                          </div>
+                          <p className="mt-1 text-sm text-night/80 leading-relaxed">
+                            {c.description}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* The 5 scene prompts */}
+                <ol className="space-y-3">
+                  {story.imagePrompts.scenes.map((scene, i) => (
+                    <li
+                      key={i}
+                      className="rounded-3xl bg-gradient-to-br from-sky-soft/60 via-white to-grape-soft/40 border-2 border-white shadow-md px-5 py-4"
+                    >
+                      <div className="flex items-baseline justify-between gap-3 mb-2">
+                        <div className="flex items-baseline gap-3">
+                          <span className="size-7 rounded-full bg-grape text-white flex items-center justify-center text-sm h-display font-bold shrink-0">
+                            {i + 1}
+                          </span>
+                          <p className="h-display text-base font-semibold text-night">
+                            {scene.momentTitle || `Escena ${i + 1}`}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(scene.prompt, "scene-" + i)}
+                          className="btn-3d kid-button shrink-0 rounded-full bg-grape px-3 py-1 text-xs h-display font-semibold text-white"
+                          style={{ borderBottomColor: "#7c5dd6" }}
+                        >
+                          {copiedKey === "scene-" + i ? "✓ Copiado" : "📋 Copiar"}
+                        </button>
+                      </div>
+                      <p
+                        className="text-sm text-night/85 leading-relaxed whitespace-pre-wrap"
+                        style={{ fontFamily: "ui-monospace, SFMono-Regular, Consolas, monospace" }}
+                      >
+                        {scene.prompt}
+                      </p>
+                    </li>
+                  ))}
+                </ol>
+
+                <p className="mt-4 text-xs text-night/45 text-center h-display">
+                  Generado {new Date(story.imagePrompts.generatedAt).toLocaleString("es")}
+                </p>
+              </>
+            )}
+          </section>
         </>
       )}
 

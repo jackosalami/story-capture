@@ -9,6 +9,8 @@ import {
   buildKidStorySystemPrompt,
   buildKidStoryUserPrompt,
 } from "../prompts/kidStory";
+import { generateImagePrompts } from "../lib/generateImagePrompts";
+import { getKidStory } from "../db/kidStories";
 import type { AgeBand } from "../db/types";
 import { Sparkle, StarMascot } from "../components/Mascots";
 
@@ -31,6 +33,7 @@ const COOKING_MESSAGES = [
   "Inventando el primer giro…",
   "Buscando las palabras justas…",
   "Pensando en un buen final…",
+  "Diseñando las imágenes del cuento…",
   "Casi listo…",
 ];
 
@@ -93,6 +96,13 @@ export function NewKidStoryScreen() {
         targetWords,
         content: body,
       });
+
+      // Second pass: generate Nano Banana image prompts for the finished story.
+      // The story is already saved, so navigation works even if this step fails
+      // (KidStoryScreen lets the user regenerate prompts on demand).
+      const fresh = await getKidStory(story.id);
+      if (fresh) await generateImagePrompts({ story: fresh, model: chapterModel });
+
       go({ name: "kids-story", kidStoryId: story.id });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
