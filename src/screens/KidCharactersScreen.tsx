@@ -1,11 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNav } from "../store/nav";
-import {
-  createKidCharacter,
-  listKidCharacters,
-} from "../db/kidCharacters";
+import { createKidCharacter, listKidCharacters } from "../db/kidCharacters";
 import { listKidStories } from "../db/kidStories";
 import type { KidCharacter, KidCharacterKind } from "../db/types";
+import { avatarForKind, colorForKind } from "../components/Mascots";
 
 const KIND_OPTIONS: KidCharacterKind[] = ["niño", "animal", "criatura", "objeto mágico", "otro"];
 
@@ -55,62 +53,89 @@ export function KidCharactersScreen() {
         <button
           type="button"
           onClick={() => go({ name: "kids-dashboard" })}
-          className="text-sm text-ink/60 hover:text-ink"
+          className="text-sm text-night/60 hover:text-night"
         >
           ← Volver
         </button>
-        <h1 className="text-2xl font-medium text-ink">Personajes</h1>
-        <span />
+        <span className="text-xs text-night/45 uppercase tracking-widest font-semibold">
+          Personajes
+        </span>
       </header>
 
+      <h1 className="h-display text-4xl text-night mb-2">Tus personajes</h1>
+      <p className="text-night/65 mb-8">
+        Los héroes, sidekicks y criaturas que pueblan tus cuentos.
+      </p>
+
       {characters.length === 0 ? (
-        <p className="text-ink/60 text-center mt-10">
-          Aún no hay personajes. Cuando crees un cuento, puedes añadir personajes aquí.
-        </p>
+        <div className="text-center mt-12">
+          <div aria-hidden className="text-6xl mb-3">🧙‍♀️🦊🐉</div>
+          <p className="text-night/65 leading-relaxed">
+            Aún no hay personajes. Crea el primero abajo, o añádelos cuando
+            empieces un cuento nuevo.
+          </p>
+        </div>
       ) : (
         <ul className="space-y-3">
-          {characters.map((c) => (
-            <li key={c.id}>
-              <button
-                type="button"
-                onClick={() => go({ name: "kids-character", kidCharacterId: c.id })}
-                className="block w-full text-left rounded-xl border border-ink/10 bg-white px-5 py-4 hover:border-warm/60 hover:shadow-sm transition"
-              >
-                <div className="flex items-baseline justify-between gap-4">
-                  <span className="text-base font-medium text-ink">{c.name}</span>
-                  <span className="text-xs text-ink/50">
-                    {storyCountById[c.id] ?? 0} {storyCountById[c.id] === 1 ? "cuento" : "cuentos"}
-                  </span>
-                </div>
-                <p className="mt-1 text-sm text-ink/60">{c.kind}</p>
-                {c.description && (
-                  <p className="mt-1 text-sm text-ink/65 line-clamp-2">{c.description}</p>
-                )}
-              </button>
-            </li>
-          ))}
+          {characters.map((c) => {
+            const color = colorForKind(c.kind);
+            return (
+              <li key={c.id}>
+                <button
+                  type="button"
+                  onClick={() => go({ name: "kids-character", kidCharacterId: c.id })}
+                  className="kid-card block w-full text-left rounded-3xl px-5 py-4"
+                >
+                  <div className="flex items-start gap-4">
+                    <span
+                      className={
+                        "size-14 rounded-full border-2 border-white shadow-sm flex items-center justify-center text-3xl " +
+                        color.bg
+                      }
+                    >
+                      {avatarForKind(c.kind)}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <span className="h-display text-xl text-night truncate">{c.name}</span>
+                        <span className="shrink-0 text-[11px] uppercase tracking-wider font-semibold text-night/55">
+                          {storyCountById[c.id] ?? 0} {storyCountById[c.id] === 1 ? "cuento" : "cuentos"}
+                        </span>
+                      </div>
+                      <span className={"inline-block mt-1 text-xs rounded-full px-2 py-0.5 font-medium " + color.bg + " " + color.text}>
+                        {c.kind}
+                      </span>
+                      {c.description && (
+                        <p className="mt-2 text-sm text-night/70 line-clamp-2">{c.description}</p>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
 
-      <div className="mt-8">
+      <div className="mt-10">
         {showCreate ? (
-          <div className="rounded-xl border border-ink/15 bg-white p-4 space-y-3">
+          <div className="rounded-3xl bg-white border-2 border-night/10 p-5 space-y-3 shadow-sm">
             <label className="block">
-              <span className="text-xs font-medium text-ink/70">Nombre</span>
+              <span className="h-display text-sm font-semibold text-night/80">Nombre</span>
               <input
                 type="text"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 autoFocus
-                className="mt-1 w-full rounded-lg border border-ink/15 px-3 py-2 text-sm focus:outline-none focus:border-warm focus:ring-2 focus:ring-warm/20"
+                className="mt-1 w-full rounded-2xl border-2 border-night/10 px-3 py-2 text-sm focus:outline-none focus:border-grape focus:ring-2 focus:ring-grape/20"
               />
             </label>
             <label className="block">
-              <span className="text-xs font-medium text-ink/70">¿Qué es?</span>
+              <span className="h-display text-sm font-semibold text-night/80">¿Qué es?</span>
               <select
                 value={newKind}
                 onChange={(e) => setNewKind(e.target.value as KidCharacterKind)}
-                className="mt-1 w-full rounded-lg border border-ink/15 px-3 py-2 text-sm focus:outline-none focus:border-warm focus:ring-2 focus:ring-warm/20"
+                className="mt-1 w-full rounded-2xl border-2 border-night/10 px-3 py-2 text-sm focus:outline-none focus:border-grape focus:ring-2 focus:ring-grape/20"
               >
                 {KIND_OPTIONS.map((k) => (
                   <option key={k} value={k}>{k}</option>
@@ -118,12 +143,12 @@ export function KidCharactersScreen() {
               </select>
             </label>
             <label className="block">
-              <span className="text-xs font-medium text-ink/70">Descripción (opcional)</span>
+              <span className="h-display text-sm font-semibold text-night/80">Descripción (opcional)</span>
               <textarea
                 value={newDescription}
                 onChange={(e) => setNewDescription(e.target.value)}
                 rows={2}
-                className="mt-1 w-full rounded-lg border border-ink/15 px-3 py-2 text-sm focus:outline-none focus:border-warm focus:ring-2 focus:ring-warm/20"
+                className="mt-1 w-full rounded-2xl border-2 border-night/10 px-3 py-2 text-sm focus:outline-none focus:border-grape focus:ring-2 focus:ring-grape/20"
               />
             </label>
             <div className="flex gap-2">
@@ -131,14 +156,15 @@ export function KidCharactersScreen() {
                 type="button"
                 onClick={saveNew}
                 disabled={!newName.trim()}
-                className="rounded-lg bg-warm px-4 py-2 text-sm font-medium text-white hover:bg-warm/90 disabled:opacity-50"
+                className="btn-3d kid-button rounded-2xl bg-grape px-4 py-2 text-sm h-display font-semibold text-white disabled:opacity-50"
+                style={{ borderBottomColor: "#7c5dd6" }}
               >
                 Añadir
               </button>
               <button
                 type="button"
                 onClick={() => { setShowCreate(false); setNewName(""); setNewDescription(""); }}
-                className="rounded-lg px-3 py-2 text-sm text-ink/60 hover:text-ink"
+                className="rounded-2xl px-3 py-2 text-sm text-night/60 hover:text-night"
               >
                 Cancelar
               </button>
@@ -148,9 +174,10 @@ export function KidCharactersScreen() {
           <button
             type="button"
             onClick={() => setShowCreate(true)}
-            className="text-sm text-warm hover:underline"
+            className="btn-3d kid-button rounded-2xl bg-gradient-to-br from-sky to-grape text-white px-5 py-3 h-display font-semibold shadow-md"
+            style={{ borderBottomColor: "#3aa19a" }}
           >
-            + Añadir personaje
+            ➕ Crear personaje
           </button>
         )}
       </div>

@@ -21,20 +21,25 @@ export function TopicLibraryScreen() {
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-10">
-      <header className="flex items-baseline justify-between mb-6">
+      <header className="mb-8">
         <button
           type="button"
           onClick={() => go({ name: "dashboard" })}
-          className="text-sm text-ink/60 hover:text-ink"
+          className="text-sm text-ink-soft hover:text-ink"
         >
           ← Volver
         </button>
       </header>
 
-      <h1 className="text-3xl font-medium text-ink mb-2">¿De qué hablar hoy?</h1>
-      <p className="text-base text-ink/60 mb-8">
-        Si no sabes por dónde empezar, escoge un tema. Es solo una idea
-        para arrancar — puedes hablar de lo que quieras una vez empieces.
+      <p className="text-warm-deep/80 text-xs uppercase tracking-widest font-medium mb-3">
+        Inspiración
+      </p>
+      <h1 className="h-serif text-4xl md:text-5xl text-ink mb-3 leading-tight">
+        ¿De qué hablar hoy?
+      </h1>
+      <p className="text-lg text-ink-soft mb-10 leading-relaxed">
+        Si no sabes por dónde empezar, escoge un tema. Es solo una idea para
+        arrancar — puedes hablar de lo que quieras una vez empieces.
       </p>
 
       <ul className="space-y-3">
@@ -43,12 +48,12 @@ export function TopicLibraryScreen() {
             <button
               type="button"
               onClick={() => pickTopic(t)}
-              className="block w-full text-left rounded-xl border border-ink/10 bg-white px-5 py-4 hover:border-warm/60 hover:shadow-sm transition"
+              className="paper-card paper-card-hover block w-full text-left rounded-2xl px-6 py-5 transition"
             >
-              <p className="text-sm font-medium text-warm uppercase tracking-wide">
+              <p className="text-xs uppercase tracking-widest text-warm-deep font-medium">
                 {t.theme}
               </p>
-              <p className="mt-1 text-base text-ink leading-relaxed">{t.prompt}</p>
+              <p className="mt-2 h-serif text-xl text-ink leading-snug">{t.prompt}</p>
             </button>
           </li>
         ))}

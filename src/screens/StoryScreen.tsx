@@ -193,17 +193,20 @@ export function StoryScreen({ storyId }: { storyId: string }) {
         </div>
       ) : (
         <>
-          <h1 className="text-3xl font-medium text-ink">
+          <p className="text-warm-deep/80 text-xs uppercase tracking-widest font-medium mb-3">
+            Una historia
+          </p>
+          <h1 className="h-serif text-4xl md:text-5xl text-ink leading-tight">
             {story.title || "Historia sin título"}
           </h1>
-          <p className="mt-2 text-sm text-ink/55">
+          <p className="mt-3 text-base text-ink-soft italic">
             {[story.storyDate, story.location].filter(Boolean).join(" · ") || formatLongDate(story.createdAt)}
           </p>
           {story.environment && (
-            <p className="mt-2 text-sm text-ink/55">Ambiente: {story.environment}</p>
+            <p className="mt-1 text-sm text-ink-soft">Ambiente: {story.environment}</p>
           )}
           {characters.length > 0 && (
-            <p className="mt-2 text-sm text-ink/55">
+            <p className="mt-1 text-sm text-ink-soft">
               Con:{" "}
               {characters.map((c, i) => (
                 <span key={c.id}>
@@ -211,7 +214,7 @@ export function StoryScreen({ storyId }: { storyId: string }) {
                   <button
                     type="button"
                     onClick={() => go({ name: "character", characterId: c.id })}
-                    className="text-warm hover:underline"
+                    className="text-warm-deep hover:underline"
                   >
                     {c.name}
                   </button>
@@ -220,16 +223,16 @@ export function StoryScreen({ storyId }: { storyId: string }) {
             </p>
           )}
           {story.mood.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-1">
+            <div className="mt-4 flex flex-wrap gap-1.5">
               {story.mood.map((m) => (
-                <span key={m} className="rounded-full bg-warm-soft text-warm text-xs px-2 py-0.5">
+                <span key={m} className="rounded-full bg-warm-soft text-warm-deep text-[11px] font-medium tracking-wide px-2.5 py-0.5">
                   {m}
                 </span>
               ))}
             </div>
           )}
           {story.summary && (
-            <p className="mt-6 text-base text-ink leading-relaxed">{story.summary}</p>
+            <p className="mt-7 text-lg text-ink/85 leading-relaxed h-serif">{story.summary}</p>
           )}
         </>
       )}
@@ -275,25 +278,29 @@ export function StoryScreen({ storyId }: { storyId: string }) {
         </section>
       )}
 
-      <section className="mt-10">
-        <div className="flex items-baseline justify-between mb-3">
-          <h2 className="text-sm uppercase tracking-wide text-ink/50">Transcripción</h2>
+      <hr className="my-12 border-0 h-px bg-gradient-to-r from-transparent via-warm/40 to-transparent" />
+
+      <section>
+        <div className="flex items-baseline justify-between mb-5">
+          <h2 className="text-xs uppercase tracking-widest text-ink-soft flex items-center gap-2">
+            <span aria-hidden>✦</span> Transcripción
+          </h2>
           {sessions.length > 1 && (
-            <span className="text-xs text-ink/45">{sessions.length} sesiones</span>
+            <span className="text-xs text-ink-soft">{sessions.length} sesiones</span>
           )}
         </div>
         {segments.length === 0 ? (
-          <p className="text-sm text-ink/50">Aún no hay grabaciones para esta historia.</p>
+          <p className="text-sm text-ink-soft italic">Aún no hay grabaciones para esta historia.</p>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-7">
             {segments.map((s) => (
               <div key={s.id}>
-                <p className="text-base leading-relaxed text-ink whitespace-pre-wrap">
+                <p className="h-serif text-lg leading-loose text-ink whitespace-pre-wrap">
                   {s.transcript}
                 </p>
                 {s.followUpQuestion && (
-                  <p className="mt-2 text-sm text-ink/55 italic">
-                    Pregunta: {s.followUpQuestion}
+                  <p className="mt-3 text-sm text-ink-soft italic border-l-2 border-warm/30 pl-3">
+                    {s.followUpQuestion}
                   </p>
                 )}
               </div>
@@ -302,13 +309,13 @@ export function StoryScreen({ storyId }: { storyId: string }) {
         )}
       </section>
 
-      <div className="mt-10 flex justify-center">
+      <div className="mt-14 flex justify-center">
         <button
           type="button"
           onClick={continueRecording}
-          className="rounded-lg border border-warm/40 bg-warm-soft px-5 py-3 text-sm font-medium text-warm hover:bg-warm/10"
+          className="rounded-full border border-warm/40 bg-warm-soft px-6 py-3 text-sm font-medium text-warm-deep hover:bg-warm/15 transition"
         >
-          Continuar grabando
+          ↪ Continuar grabando
         </button>
       </div>
     </div>

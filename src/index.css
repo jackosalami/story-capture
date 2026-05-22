@@ -1,13 +1,38 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --color-paper: #fdfaf3;
-  --color-ink: #1a1a1a;
-  --color-warm: #d97706;
-  --color-warm-soft: #fef3c7;
-  --color-record: #dc2626;
-  --color-record-soft: #fee2e2;
+  /* Type — memoir reads in a warm modern serif; kids reads in a rounded display */
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-serif: "Fraunces", "Lora", Georgia, "Times New Roman", serif;
+  --font-display: "Fredoka", "Nunito", system-ui, sans-serif;
+  --font-rounded: "Nunito", system-ui, sans-serif;
+
+  /* Memoir palette — warm fireside */
+  --color-paper: #fbf7ee;
+  --color-paper-deep: #f4ecdb;
+  --color-ink: #1f1612;
+  --color-ink-soft: #4b3a2f;
+  --color-warm: #b85c1f;          /* terracotta, richer than the prior orange */
+  --color-warm-soft: #fde7d3;
+  --color-warm-deep: #8d3f0b;
+  --color-record: #c2410c;
+  --color-record-soft: #fed7aa;
+
+  /* Kids palette — playful, bright but not garish */
+  --color-sky: #4ecdc4;            /* mint turquoise */
+  --color-sky-soft: #d8f6f3;
+  --color-grass: #5ec07d;
+  --color-grass-soft: #d5f4dc;
+  --color-grape: #a78bfa;           /* grape purple */
+  --color-grape-soft: #ecdcff;
+  --color-sun: #ffd93d;              /* sunshine yellow */
+  --color-sun-soft: #fff3b0;
+  --color-strawberry: #ff6b9d;       /* bubblegum pink */
+  --color-strawberry-soft: #ffd6e5;
+  --color-tangerine: #ff8c42;
+  --color-tangerine-soft: #ffe0cb;
+  --color-cloud: #fff8e7;            /* soft cream, never pure white */
+  --color-night: #2d1b4e;
 }
 
 html, body, #root {
@@ -18,9 +43,8 @@ body {
   background: var(--color-paper);
   color: var(--color-ink);
   font-family: var(--font-sans);
-  /* Senior-friendly base: large text, tight letter-spacing, generous line height */
-  font-size: 18px;
-  line-height: 1.55;
+  font-size: 17px;
+  line-height: 1.6;
   margin: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -28,4 +52,143 @@ body {
 
 button {
   font-family: inherit;
+}
+
+/* Workspace-aware body theming. We set `data-workspace` on <body> from React. */
+body[data-workspace="memoir"] {
+  background:
+    radial-gradient(circle at 12% 0%, rgba(184, 92, 31, 0.06), transparent 40%),
+    radial-gradient(circle at 92% 12%, rgba(184, 92, 31, 0.05), transparent 40%),
+    var(--color-paper);
+}
+
+body[data-workspace="kids"] {
+  background:
+    radial-gradient(circle at 12% 0%, rgba(88, 192, 255, 0.18), transparent 45%),
+    radial-gradient(circle at 88% 8%, rgba(255, 90, 135, 0.14), transparent 45%),
+    radial-gradient(circle at 50% 100%, rgba(165, 112, 255, 0.12), transparent 50%),
+    var(--color-cloud);
+  font-family: var(--font-rounded);
+}
+
+/* Memoir serif heading helper */
+.h-serif {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  font-variation-settings: "opsz" 96;
+}
+
+/* Kids display heading helper */
+.h-display {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Soft paper card used in memoir mode */
+.paper-card {
+  background: rgba(255, 253, 247, 0.85);
+  border: 1px solid rgba(31, 22, 18, 0.08);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.7) inset,
+    0 1px 2px rgba(31, 22, 18, 0.04),
+    0 8px 24px -16px rgba(31, 22, 18, 0.15);
+  backdrop-filter: blur(2px);
+}
+
+.paper-card-hover:hover {
+  border-color: rgba(184, 92, 31, 0.35);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.7) inset,
+    0 2px 4px rgba(31, 22, 18, 0.06),
+    0 16px 36px -16px rgba(184, 92, 31, 0.25);
+  transform: translateY(-1px);
+}
+
+/* Bright kid card with playful colored border */
+.kid-card {
+  background: white;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  box-shadow:
+    0 2px 0 rgba(42, 29, 82, 0.04),
+    0 12px 24px -12px rgba(88, 192, 255, 0.25);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.kid-card:hover {
+  transform: translateY(-2px) rotate(-0.4deg);
+  box-shadow:
+    0 4px 0 rgba(42, 29, 82, 0.06),
+    0 20px 32px -12px rgba(165, 112, 255, 0.28);
+}
+
+/* Decorative star/sparkle field for kids mode */
+.sparkle-field {
+  background-image:
+    radial-gradient(circle at 5% 20%, rgba(255, 194, 61, 0.6) 0, rgba(255, 194, 61, 0) 1.5px),
+    radial-gradient(circle at 22% 70%, rgba(165, 112, 255, 0.55) 0, rgba(165, 112, 255, 0) 1.3px),
+    radial-gradient(circle at 48% 35%, rgba(88, 192, 255, 0.6) 0, rgba(88, 192, 255, 0) 1.7px),
+    radial-gradient(circle at 76% 80%, rgba(255, 90, 135, 0.55) 0, rgba(255, 90, 135, 0) 1.5px),
+    radial-gradient(circle at 92% 30%, rgba(94, 192, 125, 0.55) 0, rgba(94, 192, 125, 0) 1.4px);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+
+/* Button squish on tap (Toca Boca-inspired), used in kids mode */
+.kid-button {
+  transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s ease;
+}
+.kid-button:active {
+  transform: translateY(2px) scale(0.97);
+}
+
+/* 3D press button (Duolingo-inspired) — solid colored bottom edge that flattens on tap */
+.btn-3d {
+  position: relative;
+  border-bottom-width: 5px;
+  border-bottom-style: solid;
+  transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), border-bottom-width 0.08s ease;
+}
+.btn-3d:active {
+  transform: translateY(3px);
+  border-bottom-width: 2px;
+}
+
+/* Bobbing mascot animation */
+@keyframes bob {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50%      { transform: translateY(-6px) rotate(2deg); }
+}
+.bob {
+  animation: bob 4.5s ease-in-out infinite;
+  transform-origin: center;
+}
+
+/* Blob-shape decorative SVG container */
+@keyframes blob-drift {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  33%      { transform: translate(8px, -10px) rotate(2deg); }
+  66%      { transform: translate(-6px, 4px) rotate(-3deg); }
+}
+.blob-drift {
+  animation: blob-drift 14s ease-in-out infinite;
+}
+
+/* Drop-shadow halo for kid character avatars */
+.kid-avatar {
+  filter: drop-shadow(0 4px 8px rgba(42, 29, 82, 0.18));
+}
+
+/* Subtle paper grain via inline SVG noise — applied in memoir mode body */
+body[data-workspace="memoir"]::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  z-index: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.6 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  background-size: 200px 200px;
 }

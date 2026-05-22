@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { createKidCharacter, listKidCharacters } from "../db/kidCharacters";
 import type { KidCharacter, KidCharacterKind } from "../db/types";
+import { avatarForKind, colorForKind } from "./Mascots";
 
 interface Props {
   selectedIds: string[];
@@ -49,24 +50,35 @@ export function KidCharacterPicker({ selectedIds, onChange }: Props) {
   return (
     <div>
       {characters.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
           {characters.map((c) => {
             const selected = selectedIds.includes(c.id);
+            const color = colorForKind(c.kind);
             return (
               <button
                 key={c.id}
                 type="button"
                 onClick={() => toggle(c.id)}
                 className={
-                  "rounded-full border px-4 py-1.5 text-sm transition " +
+                  "kid-button rounded-2xl border-2 px-3 py-2 text-left transition flex items-center gap-2 " +
                   (selected
-                    ? "bg-warm text-white border-warm"
-                    : "bg-white text-ink border-ink/20 hover:border-warm/60")
+                    ? "bg-grape text-white border-grape shadow-md"
+                    : "bg-white text-night border-night/10 hover:border-grape")
                 }
               >
-                {c.name}
-                <span className={"ml-1 " + (selected ? "text-white/80" : "text-ink/50")}>
-                  · {c.kind}
+                <span
+                  className={
+                    "size-9 rounded-full flex items-center justify-center text-xl shrink-0 " +
+                    (selected ? "bg-white/20" : color.bg)
+                  }
+                >
+                  {avatarForKind(c.kind)}
+                </span>
+                <span className="flex flex-col min-w-0">
+                  <span className="h-display text-sm font-semibold truncate">{c.name}</span>
+                  <span className={"text-[10px] uppercase tracking-wider " + (selected ? "text-white/80" : "text-night/55")}>
+                    {c.kind}
+                  </span>
                 </span>
               </button>
             );
@@ -75,24 +87,24 @@ export function KidCharacterPicker({ selectedIds, onChange }: Props) {
       )}
 
       {showCreate ? (
-        <div className="rounded-xl border border-ink/15 bg-white p-4 space-y-3">
+        <div className="rounded-2xl border-2 border-night/10 bg-white p-4 space-y-3 shadow-sm">
           <label className="block">
-            <span className="text-xs font-medium text-ink/70">Nombre</span>
+            <span className="h-display text-xs font-semibold text-night/80">Nombre</span>
             <input
               type="text"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               autoFocus
               placeholder="Lucas, Pipo, la Luna…"
-              className="mt-1 w-full rounded-lg border border-ink/15 px-3 py-2 text-sm focus:outline-none focus:border-warm focus:ring-2 focus:ring-warm/20"
+              className="mt-1 w-full rounded-xl border-2 border-night/10 px-3 py-2 text-sm focus:outline-none focus:border-grape focus:ring-2 focus:ring-grape/20"
             />
           </label>
           <label className="block">
-            <span className="text-xs font-medium text-ink/70">¿Qué es?</span>
+            <span className="h-display text-xs font-semibold text-night/80">¿Qué es?</span>
             <select
               value={newKind}
               onChange={(e) => setNewKind(e.target.value as KidCharacterKind)}
-              className="mt-1 w-full rounded-lg border border-ink/15 px-3 py-2 text-sm focus:outline-none focus:border-warm focus:ring-2 focus:ring-warm/20"
+              className="mt-1 w-full rounded-xl border-2 border-night/10 px-3 py-2 text-sm focus:outline-none focus:border-grape focus:ring-2 focus:ring-grape/20"
             >
               {KIND_OPTIONS.map((k) => (
                 <option key={k} value={k}>{k}</option>
@@ -100,13 +112,13 @@ export function KidCharacterPicker({ selectedIds, onChange }: Props) {
             </select>
           </label>
           <label className="block">
-            <span className="text-xs font-medium text-ink/70">¿Cómo es? (opcional)</span>
+            <span className="h-display text-xs font-semibold text-night/80">¿Cómo es? (opcional)</span>
             <textarea
               value={newDescription}
               onChange={(e) => setNewDescription(e.target.value)}
               rows={2}
               placeholder="Un zorro pequeño, muy curioso, que siempre lleva una bufanda roja."
-              className="mt-1 w-full rounded-lg border border-ink/15 px-3 py-2 text-sm focus:outline-none focus:border-warm focus:ring-2 focus:ring-warm/20"
+              className="mt-1 w-full rounded-xl border-2 border-night/10 px-3 py-2 text-sm focus:outline-none focus:border-grape focus:ring-2 focus:ring-grape/20"
             />
           </label>
           <div className="flex gap-2">
@@ -114,7 +126,8 @@ export function KidCharacterPicker({ selectedIds, onChange }: Props) {
               type="button"
               onClick={saveNew}
               disabled={saving || !newName.trim()}
-              className="rounded-lg bg-warm px-4 py-2 text-sm font-medium text-white hover:bg-warm/90 disabled:opacity-50"
+              className="btn-3d kid-button rounded-xl bg-grape px-4 py-2 text-sm h-display font-semibold text-white disabled:opacity-50"
+              style={{ borderBottomColor: "#7c5dd6" }}
             >
               {saving ? "Guardando…" : "Añadir"}
             </button>
@@ -125,7 +138,7 @@ export function KidCharacterPicker({ selectedIds, onChange }: Props) {
                 setNewName("");
                 setNewDescription("");
               }}
-              className="rounded-lg px-3 py-2 text-sm text-ink/60 hover:text-ink"
+              className="rounded-xl px-3 py-2 text-sm text-night/60 hover:text-night"
             >
               Cancelar
             </button>
@@ -135,7 +148,7 @@ export function KidCharacterPicker({ selectedIds, onChange }: Props) {
         <button
           type="button"
           onClick={() => setShowCreate(true)}
-          className="text-sm text-warm hover:underline"
+          className="text-sm h-display font-semibold text-grape hover:underline"
         >
           + Crear un personaje
         </button>

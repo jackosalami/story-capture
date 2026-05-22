@@ -6,31 +6,32 @@ interface Props {
 
 export function ModeToggle({ active }: Props) {
   const go = useNav((s) => s.go);
+  const isMemoir = active === "memoir";
   return (
-    <div className="inline-flex rounded-full bg-ink/5 p-1 text-sm">
+    <div className="inline-flex rounded-full bg-white/70 backdrop-blur-sm border border-ink/10 p-1 text-sm shadow-sm">
       <button
         type="button"
         onClick={() => go({ name: "dashboard" })}
         className={
-          "rounded-full px-4 py-1.5 font-medium transition " +
-          (active === "memoir"
-            ? "bg-white text-ink shadow-sm"
-            : "text-ink/60 hover:text-ink")
+          "rounded-full px-5 py-2 font-medium transition " +
+          (isMemoir
+            ? "bg-warm text-white shadow"
+            : "text-ink/55 hover:text-ink")
         }
       >
-        Mis historias
+        📖 Mis historias
       </button>
       <button
         type="button"
         onClick={() => go({ name: "kids-dashboard" })}
         className={
-          "rounded-full px-4 py-1.5 font-medium transition " +
-          (active === "kids"
-            ? "bg-white text-ink shadow-sm"
-            : "text-ink/60 hover:text-ink")
+          "rounded-full px-5 py-2 font-medium transition " +
+          (!isMemoir
+            ? "bg-grape text-white shadow"
+            : "text-ink/55 hover:text-ink")
         }
       >
-        Cuentos para niños
+        🌈 Cuentos para niños
       </button>
     </div>
   );

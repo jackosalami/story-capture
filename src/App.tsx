@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useNav } from "./store/nav";
+import { useNav, workspaceOf } from "./store/nav";
 import { useSettings } from "./store/settings";
 import { DashboardScreen } from "./screens/DashboardScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
@@ -34,6 +34,10 @@ function App() {
       go({ name: "walkthrough" });
     }
   }, [hasKey, hasSeenWalkthrough, screen.name, go]);
+
+  useEffect(() => {
+    document.body.dataset.workspace = workspaceOf(screen);
+  }, [screen]);
 
   if (!hasKey || screen.name === "settings") return <SettingsScreen />;
   if (screen.name === "walkthrough") return <WalkthroughScreen />;

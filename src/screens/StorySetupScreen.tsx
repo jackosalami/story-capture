@@ -16,19 +16,12 @@ interface Props {
   sessionId: string;
 }
 
-// The prep screen is a moment of pause — it shows the kinds of questions the
-// storyteller might want to think about, but never asks her to fill anything in.
-// Metadata is extracted from the transcript after she finishes talking.
-// "Añadir detalles" reveals an optional form for users who do want to set
-// metadata up front.
-
 export function StorySetupScreen({ storyId, sessionId }: Props) {
   const go = useNav((s) => s.go);
   const [topicPrompt, setTopicPrompt] = useState<string | null>(null);
   const [showRecall, setShowRecall] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
 
-  // Optional advanced form state — only used when "Añadir detalles" is opened.
   const [storyDate, setStoryDate] = useState("");
   const [location, setLocation] = useState("");
   const [environment, setEnvironment] = useState<string[]>([]);
@@ -53,7 +46,6 @@ export function StorySetupScreen({ storyId, sessionId }: Props) {
   }, [storyId, sessionId]);
 
   async function start() {
-    // If details panel is open, persist what was typed; otherwise just go.
     if (showDetails) {
       await updateStory(storyId, {
         storyDate: storyDate.trim(),
@@ -71,30 +63,33 @@ export function StorySetupScreen({ storyId, sessionId }: Props) {
 
   return (
     <div className="mx-auto max-w-xl px-6 py-10">
-      <header className="flex items-baseline justify-between mb-8">
+      <header className="mb-10">
         <button
           type="button"
           onClick={() => go({ name: "dashboard" })}
-          className="text-sm text-ink/60 hover:text-ink"
+          className="text-sm text-ink-soft hover:text-ink"
         >
           ← Volver
         </button>
       </header>
 
-      <h1 className="text-3xl font-medium text-ink mb-6 leading-tight">
+      <p className="text-warm-deep/80 text-xs uppercase tracking-widest font-medium mb-3">
+        Un momento de pausa
+      </p>
+      <h1 className="h-serif text-4xl md:text-5xl text-ink mb-7 leading-tight">
         Antes de empezar, piensa un momento…
       </h1>
 
       {topicPrompt && (
-        <div className="mb-8 rounded-xl bg-warm-soft border border-warm/30 px-5 py-4">
-          <p className="text-xs uppercase tracking-wide text-warm font-medium mb-1">
+        <div className="mb-8 rounded-2xl bg-warm-soft border border-warm/25 px-6 py-5 shadow-sm">
+          <p className="text-xs uppercase tracking-widest text-warm-deep font-medium mb-2">
             Tema de hoy
           </p>
-          <p className="text-base text-ink leading-relaxed">{topicPrompt}</p>
+          <p className="h-serif text-xl text-ink leading-relaxed">{topicPrompt}</p>
         </div>
       )}
 
-      <ul className="space-y-3 mb-8">
+      <ul className="space-y-4 mb-10">
         <Prompt>¿Cuándo pasó esto?</Prompt>
         <Prompt>¿Dónde fue?</Prompt>
         <Prompt>¿Cómo era el ambiente — el clima, la luz, los olores?</Prompt>
@@ -102,52 +97,50 @@ export function StorySetupScreen({ storyId, sessionId }: Props) {
         <Prompt>¿Cómo te hacía sentir?</Prompt>
       </ul>
 
-      <p className="text-sm text-ink/60 mb-8 leading-relaxed">
+      <p className="text-base text-ink-soft mb-10 leading-relaxed italic">
         No tienes que contestar nada antes. Cuando empieces a grabar, deja que
         salga como salga. Yo iré escuchando y, si quieres, te haré preguntas
         para que recuerdes más detalles.
       </p>
 
-      <div className="mb-10 rounded-xl border border-ink/10 bg-white">
-        <button
-          type="button"
-          onClick={() => setShowRecall((v) => !v)}
-          className="w-full text-left px-5 py-3 flex items-center justify-between"
-        >
-          <span className="text-sm font-medium text-ink">
-            ✨ Cosas que ayudan a recordar mejor
+      <details
+        className="mb-12 rounded-2xl paper-card overflow-hidden"
+        open={showRecall}
+        onToggle={(e) => setShowRecall((e.target as HTMLDetailsElement).open)}
+      >
+        <summary className="cursor-pointer list-none px-6 py-4 flex items-center justify-between font-medium text-ink">
+          <span className="flex items-center gap-2">
+            <span aria-hidden>✨</span>
+            Cosas que ayudan a recordar mejor
           </span>
-          <span className="text-ink/50 text-sm">{showRecall ? "−" : "+"}</span>
-        </button>
-        {showRecall && (
-          <div className="px-5 pb-5 -mt-1 text-sm text-ink/75 leading-relaxed space-y-2">
-            <p>Cierra los ojos un momento y vuelve a aquel lugar. Piensa en:</p>
-            <ul className="list-disc pl-5 space-y-1">
-              <li>El clima — ¿hacía frío, calor, llovía, había sol?</li>
-              <li>La hora — ¿era de mañana, mediodía, noche?</li>
-              <li>Los olores — ¿qué se cocinaba? ¿olía a tierra mojada, a leña, a perfume?</li>
-              <li>La comida — ¿qué estabas comiendo o bebiendo? ¿quién la preparó?</li>
-              <li>Los sonidos — ¿voces, música, animales, silencio?</li>
-              <li>Las caras — ¿quién estaba? ¿cómo era su voz, su risa?</li>
-              <li>La ropa — ¿qué llevabas puesto tú? ¿y los demás?</li>
-              <li>Las texturas — ¿el suelo, las paredes, la tela de tu vestido?</li>
-              <li>Lo que sentías por dentro — ¿alegría, miedo, vergüenza, paz?</li>
-            </ul>
-          </div>
-        )}
-      </div>
+          <span aria-hidden className="text-ink-soft text-sm">{showRecall ? "−" : "+"}</span>
+        </summary>
+        <div className="px-6 pb-6 -mt-1 text-[15px] text-ink/75 leading-relaxed space-y-2">
+          <p>Cierra los ojos un momento y vuelve a aquel lugar. Piensa en:</p>
+          <ul className="space-y-2 mt-3">
+            <RecallRow icon="🌦">El clima — ¿hacía frío, calor, llovía, había sol?</RecallRow>
+            <RecallRow icon="🕰">La hora — ¿era de mañana, mediodía, noche?</RecallRow>
+            <RecallRow icon="👃">Los olores — ¿qué se cocinaba? ¿olía a tierra mojada, a leña, a perfume?</RecallRow>
+            <RecallRow icon="🍲">La comida — ¿qué estabas comiendo? ¿quién la preparó?</RecallRow>
+            <RecallRow icon="🔊">Los sonidos — ¿voces, música, animales, silencio?</RecallRow>
+            <RecallRow icon="🙂">Las caras — ¿quién estaba? ¿cómo era su voz, su risa?</RecallRow>
+            <RecallRow icon="👗">La ropa — ¿qué llevabas puesto tú? ¿y los demás?</RecallRow>
+            <RecallRow icon="✋">Las texturas — ¿el suelo, las paredes, la tela de tu vestido?</RecallRow>
+            <RecallRow icon="💛">Lo que sentías por dentro — ¿alegría, miedo, vergüenza, paz?</RecallRow>
+          </ul>
+        </div>
+      </details>
 
       <div className="flex justify-center">
         <button
           type="button"
           onClick={start}
-          className="rounded-2xl bg-record px-10 py-5 text-xl font-medium text-white shadow-md hover:bg-record/90 active:scale-[0.99] transition"
+          className="rounded-full bg-record px-10 py-5 text-xl font-medium text-white shadow-[0_8px_30px_rgba(194,65,12,0.35)] hover:shadow-[0_12px_36px_rgba(194,65,12,0.45)] hover:bg-warm-deep transition active:translate-y-px"
         >
           Empezar a grabar
         </button>
       </div>
 
-      {/* Power-user escape hatch: typed metadata up front. Hidden by default. */}
       <div className="mt-10 text-center">
         {!showDetails ? (
           <button
@@ -205,8 +198,17 @@ export function StorySetupScreen({ storyId, sessionId }: Props) {
 
 function Prompt({ children }: { children: React.ReactNode }) {
   return (
-    <li className="flex items-start gap-3 text-lg text-ink/85 leading-relaxed">
-      <span className="text-warm select-none mt-1">·</span>
+    <li className="flex items-start gap-3 text-xl text-ink/90 leading-relaxed h-serif">
+      <span className="text-warm select-none">·</span>
+      <span>{children}</span>
+    </li>
+  );
+}
+
+function RecallRow({ icon, children }: { icon: string; children: React.ReactNode }) {
+  return (
+    <li className="flex items-start gap-3">
+      <span aria-hidden className="select-none mt-0.5">{icon}</span>
       <span>{children}</span>
     </li>
   );

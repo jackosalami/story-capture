@@ -228,79 +228,84 @@ export function RecordScreen({ sessionId }: { sessionId: string }) {
         <button
           type="button"
           onClick={() => go({ name: "dashboard" })}
-          className="text-sm text-ink/60 hover:text-ink"
+          className="text-sm text-ink-soft hover:text-ink"
         >
           ← Volver
         </button>
         {sessionDate && (
-          <span className="text-sm text-ink/50">{formatLongDate(sessionDate)}</span>
+          <span className="text-xs text-ink-soft uppercase tracking-wide">{formatLongDate(sessionDate)}</span>
         )}
       </header>
 
-      {/* Story context strip */}
       {story && (story.title || story.storyDate || story.location || characters.length > 0) && (
-        <div className="mb-6 rounded-xl border border-ink/10 bg-white/60 px-5 py-3">
+        <div className="mb-8 paper-card rounded-2xl px-6 py-4">
           {story.title && (
-            <p className="text-base font-medium text-ink">{story.title}</p>
+            <p className="h-serif text-2xl text-ink leading-tight">{story.title}</p>
           )}
-          <p className="text-xs text-ink/55">
-            {[story.storyDate, story.location].filter(Boolean).join(" · ")}
-          </p>
+          {(story.storyDate || story.location) && (
+            <p className="mt-1 text-sm text-ink-soft">
+              {[story.storyDate, story.location].filter(Boolean).join(" · ")}
+            </p>
+          )}
           {characters.length > 0 && (
-            <p className="mt-1 text-xs text-ink/55">
+            <p className="mt-1 text-sm text-ink-soft">
               Con: {characters.map((c) => c.name).join(", ")}
             </p>
           )}
         </div>
       )}
 
-      {/* Latest follow-up question */}
       {latestQuestion && phase !== "recording" && (
-        <div className="mb-8 rounded-2xl bg-warm-soft border border-warm/30 px-6 py-5">
-          <p className="text-xs uppercase tracking-wide text-warm font-medium mb-1">
-            Una pregunta
+        <div className="mb-10 rounded-2xl bg-warm-soft border border-warm/30 px-6 py-6 shadow-sm">
+          <p className="text-xs uppercase tracking-widest text-warm-deep font-medium mb-2">
+            Una pregunta para seguir
           </p>
-          <p className="text-lg text-ink leading-relaxed">{latestQuestion}</p>
+          <p className="h-serif text-xl text-ink leading-relaxed">{latestQuestion}</p>
         </div>
       )}
 
-      <div className="flex flex-col items-center my-10">
+      <div className="flex flex-col items-center my-12">
         {phase === "recording" ? (
           <button
             type="button"
             onClick={stopRecording}
-            className="size-48 rounded-full bg-record text-white text-xl font-medium shadow-lg hover:bg-record/90 active:scale-95 transition flex items-center justify-center"
+            className="relative size-56 rounded-full bg-record text-white shadow-[0_20px_60px_-12px_rgba(194,65,12,0.55)] hover:shadow-[0_24px_70px_-12px_rgba(194,65,12,0.65)] active:scale-95 transition flex items-center justify-center"
           >
-            <span className="flex flex-col items-center gap-2">
-              <span className="size-6 bg-white rounded-sm animate-pulse" />
-              Parar
+            <span aria-hidden className="absolute inset-0 rounded-full ring-8 ring-record/15 animate-ping" />
+            <span aria-hidden className="absolute inset-0 rounded-full ring-4 ring-record/30 animate-pulse" />
+            <span className="relative flex flex-col items-center gap-2">
+              <span className="size-7 bg-white rounded-sm" />
+              <span className="text-xl font-medium">Parar</span>
             </span>
           </button>
         ) : phase === "processing" ? (
-          <div className="size-48 rounded-full bg-ink/10 text-ink/60 text-lg flex items-center justify-center">
-            Transcribiendo…
+          <div className="size-56 rounded-full bg-paper-deep flex flex-col items-center justify-center gap-2">
+            <span aria-hidden className="text-4xl">✍️</span>
+            <span className="text-base text-ink-soft">Escribiendo…</span>
           </div>
         ) : phase === "ending" ? (
-          <div className="size-48 rounded-full bg-ink/10 text-ink/60 text-lg flex items-center justify-center text-center px-4">
-            Guardando resumen…
+          <div className="size-56 rounded-full bg-paper-deep flex flex-col items-center justify-center text-center px-4 gap-2">
+            <span aria-hidden className="text-4xl">📖</span>
+            <span className="text-base text-ink-soft">Guardando resumen…</span>
           </div>
         ) : phase === "done" ? (
-          <div className="size-48 rounded-full bg-emerald-100 text-emerald-800 text-lg flex items-center justify-center">
-            ¡Listo!
+          <div className="size-56 rounded-full bg-emerald-50 border-4 border-emerald-200 text-emerald-700 flex flex-col items-center justify-center gap-2">
+            <span aria-hidden className="text-4xl">✨</span>
+            <span className="h-serif text-2xl">¡Listo!</span>
           </div>
         ) : (
           <button
             type="button"
             onClick={startRecording}
-            className="size-48 rounded-full bg-record text-white text-xl font-medium shadow-lg hover:bg-record/90 active:scale-95 transition flex items-center justify-center"
+            className="relative size-56 rounded-full bg-gradient-to-br from-record to-warm-deep text-white shadow-[0_20px_60px_-12px_rgba(194,65,12,0.45)] hover:shadow-[0_24px_70px_-12px_rgba(194,65,12,0.6)] active:scale-95 transition flex items-center justify-center"
           >
-            <span className="flex flex-col items-center gap-1">
-              <span className="size-6 bg-white rounded-full" />
-              Grabar
+            <span className="flex flex-col items-center gap-2">
+              <span className="size-7 bg-white rounded-full" />
+              <span className="text-xl font-medium">Grabar</span>
             </span>
           </button>
         )}
-        <p className="mt-4 text-sm text-ink/60 text-center max-w-sm">
+        <p className="mt-6 text-base text-ink-soft text-center max-w-sm leading-relaxed">
           {phase === "recording"
             ? "Estoy escuchando. Toma tu tiempo."
             : phase === "processing"
@@ -314,19 +319,19 @@ export function RecordScreen({ sessionId }: { sessionId: string }) {
       </div>
 
       {error && (
-        <div className="mb-6 rounded-lg bg-record-soft border border-record/30 px-4 py-3 text-sm text-record">
+        <div className="mb-6 rounded-2xl bg-record-soft border border-record/30 px-5 py-3 text-sm text-warm-deep">
           {error}
         </div>
       )}
 
       {segments.length > 0 && (
-        <section className="mt-10">
-          <h2 className="text-sm uppercase tracking-wide text-ink/50 mb-3">
-            Lo que has contado
+        <section className="mt-12">
+          <h2 className="text-xs uppercase tracking-widest text-ink-soft mb-4 flex items-center gap-2">
+            <span aria-hidden>✦</span> Lo que has contado
           </h2>
-          <div className="space-y-4">
+          <div className="space-y-5">
             {segments.map((s) => (
-              <p key={s.id} className="text-base leading-relaxed text-ink whitespace-pre-wrap">
+              <p key={s.id} className="h-serif text-lg leading-loose text-ink whitespace-pre-wrap">
                 {s.transcript}
               </p>
             ))}
@@ -335,11 +340,11 @@ export function RecordScreen({ sessionId }: { sessionId: string }) {
       )}
 
       {segments.length > 0 && phase === "idle" && (
-        <div className="mt-12 flex justify-center">
+        <div className="mt-14 flex justify-center">
           <button
             type="button"
             onClick={endSession}
-            className="rounded-lg border border-ink/20 px-5 py-3 text-sm text-ink/70 hover:border-ink/40 hover:text-ink"
+            className="rounded-full border border-ink/20 px-6 py-3 text-sm text-ink-soft hover:border-ink/40 hover:text-ink transition"
           >
             Terminar sesión
           </button>
