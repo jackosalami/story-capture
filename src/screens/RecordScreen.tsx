@@ -25,6 +25,8 @@ import {
   buildMetadataUserPrompt,
   parseMetadataResponse,
 } from "../prompts/spanish";
+import { listCharacters } from "../db/characters";
+import { createMention } from "../db/characterMentions";
 import { formatLongDate } from "../lib/format";
 
 type Phase = "idle" | "recording" | "processing" | "ending" | "done";
@@ -177,18 +179,28 @@ export function RecordScreen({ sessionId }: { sessionId: string }) {
         await updateStory(story.id, { summary });
       }
 
-      // Extract structured metadata from the transcript, but only fill empty fields
-      // so we never overwrite anything the user typed by hand.
+      // Extract structured metadata + people from the transcript.
+      // Only fills empty fields on the story (never overwrites typed data).
+      // For each detected person, queue a CharacterMention for the admin to review.
       if (story && accumulated.trim().length > 80) {
         try {
+          // Give the model the current book's character catalog as matching context.
+          const existingCharacters = await listCharacters();
+          const charHints = existingCharacters.map((c) => ({
+            id: c.id,
+            name: c.name,
+            relationship: c.relationship,
+            description: c.description,
+          }));
+
           const raw = await chat({
             model: chatModel,
             messages: [
               { role: "system", content: METADATA_SYSTEM_PROMPT },
-              { role: "user", content: buildMetadataUserPrompt(accumulated) },
+              { role: "user", content: buildMetadataUserPrompt(accumulated, charHints) },
             ],
             temperature: 0.2,
-            maxTokens: 400,
+            maxTokens: 1200,
           });
           const meta = parseMetadataResponse(raw);
           if (meta) {
@@ -199,9 +211,26 @@ export function RecordScreen({ sessionId }: { sessionId: string }) {
               patch.environment = meta.environment.join(", ");
             }
             if (story.mood.length === 0 && meta.mood.length > 0) patch.mood = meta.mood;
+            // Keep the flat list around for backwards-compat with old UI.
             if (meta.mentionedPeople.length > 0) patch.mentionedPeople = meta.mentionedPeople;
             if (Object.keys(patch).length > 0) {
               await updateStory(story.id, patch);
+            }
+
+            // Queue character-mention suggestions for admin review.
+            for (const p of meta.people) {
+              await createMention({
+                storyId: story.id,
+                sessionId,
+                bookId: story.bookId,
+                mentionedAs: p.mentionedAs,
+                isNew: p.isNew,
+                suggestedCharacterId: p.suggestedCharacterId ?? undefined,
+                confidence: p.confidence,
+                newTraits: p.newTraits,
+                newDescriptionFacts: p.newDescriptionFacts,
+                newRelationship: p.newRelationship ?? undefined,
+              });
             }
           }
         } catch {

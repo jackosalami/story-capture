@@ -60,29 +60,83 @@ ${firstSegment}
 
 export const METADATA_SYSTEM_PROMPT = `Eres una asistente que lee transcripciones de narración oral en español y extrae datos estructurados sobre la historia.
 
-Devuelve EXCLUSIVAMENTE un objeto JSON válido (sin markdown, sin explicaciones, sin envoltorios) con esta forma:
+Vas a recibir DOS bloques en el mensaje del usuario:
+1. EXISTING_CHARACTERS — el catálogo de personajes que ya existen en el libro (con id, nombre, relación, descripción acumulada).
+2. TRANSCRIPT — la transcripción de la historia.
+
+Devuelve EXCLUSIVAMENTE un objeto JSON válido (sin markdown, sin envoltorios) con esta forma:
 
 {
   "storyDate": "string — aproximación libre como 'primavera de 1972', 'cuando tenía 8 años', o '' si no se menciona",
   "location": "string — lugar donde pasó la historia, o '' si no se menciona",
   "environment": ["array de palabras del ambiente: frío, caluroso, de noche, lluvioso, oscuro, tranquilo, etc. Vacío si no hay pistas"],
   "mood": ["array de temas o emociones: alegría, tristeza, amor, aventura, familia, infancia, pérdida, orgullo, miedo, esperanza, trabajo, fe, tradición, inmigración"],
-  "mentionedPeople": ["array de nombres propios de personas mencionadas, ej: 'Tía María', 'abuela Rosa'. No incluyas a la narradora misma."]
+  "people": [
+    {
+      "mentionedAs": "string — el nombre exacto o referencia como aparece en la transcripción (ej. 'Tía María', 'mi abuela', 'el tío Pepe')",
+      "suggestedCharacterId": "string | null — si crees con CONFIANZA que coincide con uno de EXISTING_CHARACTERS, pon su id. null si es nuevo o ambiguo",
+      "confidence": "'high' | 'medium' | 'low' | 'unknown' — qué tan segura estás del match",
+      "isNew": true | false — true si crees que NO está en EXISTING_CHARACTERS (es persona nueva),
+      "newTraits": ["palabras de personalidad nuevas inferidas de esta historia: graciosa, gruñón, valiente, tímido, soñador, etc. Solo añade rasgos NUEVOS que no estén ya en la descripción del personaje existente."],
+      "newDescriptionFacts": ["frases cortas con detalles VISUALES o BIOGRÁFICOS nuevos sobre esta persona inferidos de esta historia. Ej: 'siempre llevaba un mandil azul', 'olía a tabaco', 'trabajaba en la fábrica de Salamanca', 'tenía el pelo largo y blanco'. Solo facts NUEVOS no ya conocidos."],
+      "newRelationship": "string | null — si la transcripción aclara o introduce la relación con la narradora (ej. 'tía por parte de mamá', 'vecina del pueblo') y no era conocida. null si ya estaba clara."
+    }
+  ]
 }
 
-Reglas:
-- Sé conservadora. Si la transcripción no menciona un dato, deja el campo vacío ('' o []).
-- No inventes nombres ni lugares.
+Reglas críticas:
+- Sé CONSERVADORA con los matches. Si dudas, pon suggestedCharacterId=null y isNew=false con confidence='low'. El humano confirma manualmente; mejor que te quedes corta que inventar matches.
+- Si la transcripción dice "María" y existe "Tía María" en EXISTING_CHARACTERS, considera match high si el contexto encaja (relación, época, lugar).
+- Si la transcripción dice "María" y existen DOS personajes "María", no escojas ninguno — confidence='low', suggestedCharacterId=null. El humano disambigua.
+- newTraits y newDescriptionFacts deben extraerse ÚNICAMENTE de pistas en la transcripción, nunca inventadas.
+- No incluyas a la narradora misma (la persona que cuenta la historia).
+- Si EXISTING_CHARACTERS está vacío y mencionas personas, todas son isNew=true.
 - Para mood, escoge solo de la lista dada arriba.
-- Los nombres propios deben aparecer literalmente en la transcripción.
 - Tu respuesta debe ser solo el JSON, parseable sin modificaciones.`;
 
-export function buildMetadataUserPrompt(transcript: string): string {
-  return `Extrae los metadatos de esta sesión:
+export interface ExistingCharacterHint {
+  id: string;
+  name: string;
+  relationship: string;
+  description: string;
+}
 
+export function buildMetadataUserPrompt(
+  transcript: string,
+  existingCharacters: ExistingCharacterHint[],
+): string {
+  const charactersBlock = existingCharacters.length === 0
+    ? "(El libro aún no tiene personajes registrados. Toda persona mencionada será nueva.)"
+    : existingCharacters
+        .map((c) =>
+          [
+            `- id: ${c.id}`,
+            `  nombre: ${c.name}`,
+            c.relationship ? `  relación: ${c.relationship}` : "",
+            c.description ? `  descripción acumulada: ${c.description}` : "",
+          ].filter(Boolean).join("\n"),
+        )
+        .join("\n");
+
+  return `EXISTING_CHARACTERS:
+${charactersBlock}
+
+TRANSCRIPT:
 ---
 ${transcript}
----`;
+---
+
+Extrae los metadatos siguiendo el esquema y reglas del sistema. Devuelve solo el JSON.`;
+}
+
+export interface ExtractedPerson {
+  mentionedAs: string;
+  suggestedCharacterId: string | null;
+  confidence: "high" | "medium" | "low" | "unknown";
+  isNew: boolean;
+  newTraits: string[];
+  newDescriptionFacts: string[];
+  newRelationship: string | null;
 }
 
 export interface ExtractedMetadata {
@@ -90,11 +144,12 @@ export interface ExtractedMetadata {
   location: string;
   environment: string[];
   mood: string[];
+  people: ExtractedPerson[];
+  // Backwards-compat flat list — derived from people[].mentionedAs.
   mentionedPeople: string[];
 }
 
 export function parseMetadataResponse(raw: string): ExtractedMetadata | null {
-  // The model sometimes wraps JSON in markdown fences despite instructions; strip them.
   const cleaned = raw
     .trim()
     .replace(/^```(?:json)?\s*/i, "")
@@ -102,12 +157,53 @@ export function parseMetadataResponse(raw: string): ExtractedMetadata | null {
     .trim();
   try {
     const parsed = JSON.parse(cleaned);
+    const people: ExtractedPerson[] = Array.isArray(parsed.people)
+      ? parsed.people
+          .filter((p: unknown) => p && typeof p === "object")
+          .map((p: Record<string, unknown>): ExtractedPerson => ({
+            mentionedAs: typeof p.mentionedAs === "string" ? p.mentionedAs : "",
+            suggestedCharacterId:
+              typeof p.suggestedCharacterId === "string" ? p.suggestedCharacterId : null,
+            confidence:
+              p.confidence === "high" || p.confidence === "medium" || p.confidence === "low"
+                ? (p.confidence as "high" | "medium" | "low")
+                : "unknown",
+            isNew: p.isNew === true,
+            newTraits: Array.isArray(p.newTraits)
+              ? p.newTraits.filter((x: unknown) => typeof x === "string")
+              : [],
+            newDescriptionFacts: Array.isArray(p.newDescriptionFacts)
+              ? p.newDescriptionFacts.filter((x: unknown) => typeof x === "string")
+              : [],
+            newRelationship: typeof p.newRelationship === "string" ? p.newRelationship : null,
+          }))
+          .filter((p: ExtractedPerson) => p.mentionedAs)
+      : // Backwards-compat: if the model emitted the old mentionedPeople array
+        Array.isArray(parsed.mentionedPeople)
+          ? parsed.mentionedPeople
+              .filter((x: unknown) => typeof x === "string")
+              .map((name: string): ExtractedPerson => ({
+                mentionedAs: name,
+                suggestedCharacterId: null,
+                confidence: "unknown",
+                isNew: true,
+                newTraits: [],
+                newDescriptionFacts: [],
+                newRelationship: null,
+              }))
+          : [];
+
     return {
       storyDate: typeof parsed.storyDate === "string" ? parsed.storyDate : "",
       location: typeof parsed.location === "string" ? parsed.location : "",
-      environment: Array.isArray(parsed.environment) ? parsed.environment.filter((x: unknown) => typeof x === "string") : [],
-      mood: Array.isArray(parsed.mood) ? parsed.mood.filter((x: unknown) => typeof x === "string") : [],
-      mentionedPeople: Array.isArray(parsed.mentionedPeople) ? parsed.mentionedPeople.filter((x: unknown) => typeof x === "string") : [],
+      environment: Array.isArray(parsed.environment)
+        ? parsed.environment.filter((x: unknown) => typeof x === "string")
+        : [],
+      mood: Array.isArray(parsed.mood)
+        ? parsed.mood.filter((x: unknown) => typeof x === "string")
+        : [],
+      people,
+      mentionedPeople: people.map((p) => p.mentionedAs),
     };
   } catch {
     return null;

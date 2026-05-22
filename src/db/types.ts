@@ -47,6 +47,35 @@ export interface Story {
   bookId?: ID; // which MemoirBook this story belongs to (Wave C)
 }
 
+// --- Memoir-side: AI character detection queue (Wave C, Phase 2) ---
+//
+// After each session ends, the AI scans the transcript for mentioned people
+// and tries to match them against existing Characters. The structured
+// suggestions land in this queue for the admin to confirm. Confirming a
+// match enriches the existing character with new traits + descriptive facts;
+// confirming a new person creates a Character with the AI's draft profile.
+
+export type MentionStatus = "pending" | "linked" | "created" | "dismissed";
+export type MentionConfidence = "high" | "medium" | "low" | "unknown";
+
+export interface CharacterMention {
+  id: ID;
+  storyId: ID;
+  sessionId: ID;
+  bookId?: ID;
+  // What the AI extracted from the transcript:
+  mentionedAs: string;          // the exact name/reference used in the story
+  isNew: boolean;               // AI's guess: is this a new person?
+  suggestedCharacterId?: ID;    // if AI matched it to an existing character
+  confidence: MentionConfidence;
+  // Profile facts the AI extracted about this person from THIS story:
+  newTraits: string[];          // personality words (graciosa, gruñón…)
+  newDescriptionFacts: string[]; // descriptive facts (pelo blanco, mandil azul…)
+  newRelationship?: string;     // e.g. "tía por parte de mamá"
+  status: MentionStatus;
+  createdAt: string;
+}
+
 // --- Memoir-side: Books (Wave C) ---
 //
 // A MemoirBook is a top-level container for a coherent group of stories
