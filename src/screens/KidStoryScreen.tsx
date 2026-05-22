@@ -15,6 +15,7 @@ import {
   buildKidStoryUserPrompt,
 } from "../prompts/kidStory";
 import { generateImagePrompts } from "../lib/generateImagePrompts";
+import { augmentCastForPrompt } from "../lib/characterDefaults";
 import { Sparkle, StarMascot, avatarForKind } from "../components/Mascots";
 import { useObjectUrl } from "../lib/useObjectUrl";
 
@@ -72,7 +73,9 @@ export function KidStoryScreen({ kidStoryId }: { kidStoryId: string }) {
     setError(null);
     setRegenerating(true);
     try {
-      const protagonists = await getKidCharactersByIds(story.protagonistIds);
+      const protagonists = augmentCastForPrompt(
+        await getKidCharactersByIds(story.protagonistIds),
+      );
       const content = await chat({
         model: chapterModel,
         messages: [

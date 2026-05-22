@@ -6,6 +6,7 @@ import {
 } from "../prompts/kidStoryImages";
 import { updateKidStory } from "../db/kidStories";
 import { getKidCharactersByIds } from "../db/kidCharacters";
+import { augmentCastForPrompt } from "./characterDefaults";
 import type { KidStory } from "../db/types";
 
 // Generates Nano Banana image prompts for a finished kid story and persists them.
@@ -15,7 +16,9 @@ export async function generateImagePrompts(args: {
   model: string;
 }): Promise<boolean> {
   try {
-    const characters = await getKidCharactersByIds(args.story.protagonistIds);
+    const characters = augmentCastForPrompt(
+      await getKidCharactersByIds(args.story.protagonistIds),
+    );
     const raw = await chat({
       model: args.model,
       messages: [

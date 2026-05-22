@@ -26,7 +26,13 @@ Reglas obligatorias:
 
 5. **Tono**: Cálido, imaginativo, juguetón. Usa imágenes vivas (olores, sonidos, texturas, colores) sin abusar de los adjetivos. Permite momentos de humor y ternura.
 
-6. **Personajes**: Usa exactamente los personajes que el usuario te da. Respeta su nombre, su naturaleza (niño, animal, criatura, etc.) y su descripción. No inventes protagonistas nuevos, pero puedes añadir personajes secundarios pequeños si la historia lo pide.
+6. **Personajes — esto es crítico**: Usa los personajes EXACTOS que el usuario te da. Para cada uno:
+   - Mantén su nombre literal (misma ortografía).
+   - Respeta su naturaleza (niño, niña, animal, criatura, objeto mágico).
+   - Si tiene una descripción visual o personalidad, intégrala. La descripción NO es solo aspecto físico — define cómo se ve y a menudo cómo se comporta. Cuando aparece en la escena, deja caer detalles visuales naturales (su pelo, su ropa característica, un accesorio suyo) y dale acciones o reacciones que reflejen esos rasgos.
+   - Si tiene traits (valiente, tímido, curioso, gruñón, soñador, etc.), DEBEN salir en su voz, sus reacciones y sus decisiones a lo largo del cuento. Un personaje tímido habla bajito o se esconde; uno curioso pregunta y se acerca; uno valiente da el primer paso ante el miedo. Sus diálogos y acciones deben sentirse "como Cami sería", no genéricos.
+   - Si el usuario tiene varios personajes, dales dinámica entre ellos coherente con sus rasgos (uno arrastra al otro a la aventura, otro la frena con cariño, etc.).
+   - No inventes protagonistas nuevos. Puedes añadir personajes secundarios pequeños si la historia lo pide, pero no eclipsan a los del cast.
 
 7. **Lección o tema**: Si el usuario te da un tema (valentía, compartir, perder el miedo a la oscuridad…), inclúyelo de forma natural a través de las acciones del protagonista. NUNCA lo digas como moraleja explícita al final. Que el niño lo sienta, no que se lo expliquen.
 
@@ -49,16 +55,23 @@ export function buildKidStoryUserPrompt(args: {
 }): string {
   const cast = args.protagonists.length === 0
     ? "El protagonista lo eliges tú: un personaje cálido, apropiado para la edad."
-    : args.protagonists.map((c) => {
-        const traits = c.traits.length > 0 ? ` (rasgos: ${c.traits.join(", ")})` : "";
-        const desc = c.description ? ` — ${c.description}` : "";
-        return `- ${c.name}, ${c.kind}${desc}${traits}`;
-      }).join("\n");
+    : args.protagonists.map((c, i) => {
+        const parts = [
+          `${i + 1}. ${c.name} — ${c.kind}`,
+        ];
+        if (c.description) {
+          parts.push(`   Cómo es: ${c.description}`);
+        }
+        if (c.traits.length > 0) {
+          parts.push(`   Rasgos de personalidad: ${c.traits.join(", ")} (deben verse en sus acciones, diálogos y decisiones a lo largo del cuento)`);
+        }
+        return parts.join("\n");
+      }).join("\n\n");
 
   const lines = [
     "Escríbeme un cuento original con estos elementos:",
     "",
-    "Personajes:",
+    "PERSONAJES (úsalos exactamente como te los doy; sus rasgos deben moldear cómo hablan y actúan):",
     cast,
     "",
     `Escenario: ${args.setting || "Tú decides un escenario cálido y adecuado."}`,

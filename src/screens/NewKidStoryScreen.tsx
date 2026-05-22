@@ -11,6 +11,7 @@ import {
 } from "../prompts/kidStory";
 import { generateImagePrompts } from "../lib/generateImagePrompts";
 import { getKidStory } from "../db/kidStories";
+import { augmentCastForPrompt } from "../lib/characterDefaults";
 import type { AgeBand } from "../db/types";
 import { Sparkle, StarMascot } from "../components/Mascots";
 
@@ -64,7 +65,9 @@ export function NewKidStoryScreen() {
     setError(null);
     setGenerating(true);
     try {
-      const protagonists = await getKidCharactersByIds(protagonistIds);
+      const protagonists = augmentCastForPrompt(
+        await getKidCharactersByIds(protagonistIds),
+      );
       const content = await chat({
         model: chapterModel,
         messages: [

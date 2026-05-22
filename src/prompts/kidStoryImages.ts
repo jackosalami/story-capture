@@ -48,20 +48,24 @@ You will receive a CAST list in the user message — these are the named charact
 2. You MUST write a concrete visual "description". If the cast hint includes a description, expand and refine it into a richer paragraph. If the hint is empty, invent a coherent visual identity based on the story text and what the character is (niño / animal / criatura / objeto mágico). The description must contain:
    - what they are (species or type)
    - approximate age or size
-   - hair / fur / feathers — color, texture, style
+   - hair / fur / feathers — color, texture, style. **HAIRSTYLE IS REQUIRED. State it explicitly (e.g. "two small pigtails on each side", "short messy bob", "long braid down the back"). If the hint specifies a hairstyle, use that EXACT hairstyle in every scene.**
    - eye color
    - skin tone (if applicable)
    - clothing — every visible garment, with color and material
    - accessories — hats, scarves, glasses, bags, jewelry, weapons-but-friendly, etc.
    - any distinctive marks — freckles, scars, a missing tooth, a streak of color, etc.
 
-3. In every scene prompt, you MUST mention by name every character from the cast who appears in that scene, AND include their full description verbatim from the "characters" array. Copy-paste it word-for-word. Do not paraphrase between scenes. Do not abbreviate after the first mention. Repeat the entire description every single time the character appears.
+3. **References to known characters or styles**: If the visual hint mentions a recognizable character, person, or style reference (e.g. "looks like Mei from My Neighbor Totoro", "Ghibli-style girl", "like the kid from Coco"), incorporate the canonical visual features of that reference into your description. Be specific — name the hair, the clothing, the body proportions associated with that reference. The reader of your prompt should not need to know the reference; your description must stand alone with all those features spelled out.
 
-4. The pattern for inserting a character in a scene is:
-   "<Name>, <full description verbatim>, [what they are doing]"
-   Example: "Pipo, a small russet-furred fox cub with bright amber eyes, a fluffy white-tipped tail, and a hand-knitted red scarf with mismatched green stripes, crouches beside a moss-covered log…"
+4. **Personality traits inform body language**: If the cast hint includes personality traits (curious, shy, brave, dreamy, mischievous, etc.), let those traits show in each scene's posture, expression, and what the character is doing. A curious character peers, reaches, leans in. A shy character hides behind something, looks down. A brave character stands tall, leads the others. Don't just say the character is "X" — render the trait visually in their body.
 
-5. If a scene features multiple characters from the cast, include each one with this same expanded pattern. Yes, the prompts will be long. That is correct — Nano Banana needs every detail in every prompt to render the same character consistently.
+5. In every scene prompt, you MUST mention by name every character from the cast who appears in that scene, AND include their full description verbatim from the "characters" array. Copy-paste it word-for-word. Do not paraphrase between scenes. Do not abbreviate after the first mention. Repeat the entire description every single time the character appears.
+
+6. The pattern for inserting a character in a scene is:
+   "<Name>, <full description verbatim>, [body language matching their traits] [what they are doing]"
+   Example: "Pipo, a small russet-furred fox cub with bright amber eyes, a fluffy white-tipped tail, and a hand-knitted red scarf with mismatched green stripes, leans forward with twitching curious ears, paw extended toward a glowing blue firefly that hovers above a moss-covered log…"
+
+7. If a scene features multiple characters from the cast, include each one with this same expanded pattern. Yes, the prompts will be long. That is correct — Nano Banana needs every detail in every prompt to render the same character consistently.
 
 ## C. Style — Studio Ghibli (REQUIRED)
 
