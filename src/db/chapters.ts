@@ -38,7 +38,10 @@ export async function listChaptersInBook(bookId: string): Promise<Chapter[]> {
 }
 
 export async function deleteChapter(id: string): Promise<void> {
-  // Unassign stories from this chapter (don't delete them).
+  // Read the chapter BEFORE deleting so we know which book to compact after.
+  const chapter = await db.chapters.get(id);
+  if (!chapter) return;
+
   await db.transaction("rw", db.chapters, db.stories, async () => {
     const stories = await db.stories.where("chapterId").equals(id).toArray();
     for (const s of stories) {
@@ -46,14 +49,12 @@ export async function deleteChapter(id: string): Promise<void> {
     }
     await db.chapters.delete(id);
   });
+
   // Compact remaining chapter order indices for the same book.
-  const chapter = await db.chapters.get(id);
-  if (chapter) {
-    const remaining = await listChaptersInBook(chapter.bookId);
-    for (let i = 0; i < remaining.length; i++) {
-      if (remaining[i].order !== i) {
-        await db.chapters.update(remaining[i].id, { order: i });
-      }
+  const remaining = await listChaptersInBook(chapter.bookId);
+  for (let i = 0; i < remaining.length; i++) {
+    if (remaining[i].order !== i) {
+      await db.chapters.update(remaining[i].id, { order: i });
     }
   }
 }
