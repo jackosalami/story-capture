@@ -69,25 +69,28 @@ You will receive a CAST list in the user message — these are the named charact
 
 7. If a scene features multiple characters from the cast, include each one with this same expanded pattern. Yes, the prompts will be long. That is correct — Nano Banana needs every detail in every prompt to render the same character consistently.
 
-## C. Style — Studio Ghibli (REQUIRED)
+## C. Style — Studio Ghibli (REQUIRED, NON-NEGOTIABLE)
 
 The shared style is fixed: **Studio Ghibli hand-drawn animation style**. Every scene must read as a frame from a Ghibli film (Totoro, Spirited Away, Howl's Moving Castle, Kiki's Delivery Service, Ponyo).
 
-The "style" paragraph you output should fix that look explicitly. Build it from elements like:
+**HARD REQUIREMENTS:**
 
-- "Studio Ghibli hand-drawn 2D animation aesthetic"
-- "soft watercolor backgrounds with painterly skies and atmospheric depth"
-- "warm pastel and earth-tone palette" (or "muted natural palette" for outdoor scenes)
-- "delicate hand-inked lines around characters and props"
-- "expressive characters with round soulful eyes, gentle smiles, and slightly oversized heads relative to bodies — Ghibli proportions"
-- "soft cel-shaded volumes with subtle ambient occlusion, no harsh shadows"
-- "Miyazaki-style attention to ambient natural detail — wind in grass, drifting clouds, dancing dust motes in sunbeams, rustling leaves"
-- "cinematic 16:9 widescreen composition" (use 16:9 consistently — Ghibli films are widescreen)
-- "soft golden-hour lighting" OR "soft overcast natural lighting" OR "magical twilight glow" — choose what fits the story's mood and use the SAME light across all 5 scenes for continuity
+1. The literal phrase "Studio Ghibli" MUST appear in the "style" paragraph AND in the opening sentence of EVERY scene prompt. Do not paraphrase to "Ghibli-inspired" or "in the style of Miyazaki" — use the words "Studio Ghibli" explicitly.
 
-EVERY scene prompt must begin with the shared style paragraph (verbatim or near-verbatim) so Nano Banana locks the same Ghibli look across all 5 images.
+2. The "style" paragraph you output should fix the canonical look. Build it from these mandatory elements:
+   - "Studio Ghibli hand-drawn 2D animation style"
+   - "soft watercolor painted backgrounds with painterly skies and atmospheric depth"
+   - "warm pastel and earth-tone palette" (or "muted natural palette" for outdoor scenes — pick one and stick with it)
+   - "delicate hand-inked lines around characters and props"
+   - "expressive characters with round soulful eyes, gentle smiles, and slightly oversized heads relative to bodies — Ghibli proportions"
+   - "soft cel-shaded volumes with subtle ambient occlusion, no harsh shadows"
+   - "Miyazaki-style attention to ambient natural detail — wind in grass, drifting clouds, dancing dust motes in sunbeams, rustling leaves"
+   - "cinematic 16:9 widescreen composition" (use 16:9 consistently — Ghibli films are widescreen)
+   - "soft golden-hour lighting" OR "soft overcast natural lighting" OR "magical twilight glow" — choose ONE and use the same lighting in all 5 scenes for continuity
 
-Do NOT mention: photorealism, hyperrealism, photography, 3D render, Pixar, Disney, anime (Ghibli is its own thing — saying "anime" pulls modern flat anime aesthetics that don't match). Do NOT mix in other animation studio names.
+3. Every scene prompt's FIRST sentence must include the words "Studio Ghibli hand-drawn 2D animation style" verbatim. This is what locks Nano Banana into the same look across all 5 images.
+
+4. Do NOT mention: photorealism, hyperrealism, photography, 3D render, Pixar, Disney, anime, cartoon-network style. Studio Ghibli is its own thing — calling it "anime" or any other word pulls a different aesthetic. Use "Studio Ghibli" only.
 
 ## D. Scene structure
 Each scene prompt is one paragraph (3–6 sentences), structured roughly as:
@@ -156,6 +159,17 @@ export function buildImagePromptsUserPrompt(args: {
   ].join("\n");
 }
 
+const GHIBLI_PREFIX =
+  "Studio Ghibli hand-drawn 2D animation style, soft watercolor painted backgrounds with delicate hand-inked lines, warm earth-tone palette, expressive characters with round soulful eyes and Ghibli proportions, soft golden-hour lighting, cinematic 16:9 widescreen composition. ";
+
+// Safety net: if the model forgot to mention "Studio Ghibli" in a scene prompt
+// or the style paragraph, prepend the canonical phrase so Nano Banana still
+// gets the right look. Cheap insurance for the case where the model drifts.
+function ensureGhibli(text: string): string {
+  if (/studio ghibli/i.test(text)) return text;
+  return GHIBLI_PREFIX + text;
+}
+
 export function parseImagePromptsResponse(raw: string): KidStoryImagePrompts | null {
   // Strip any accidental markdown fences. Find the outermost {...} block.
   const cleaned = raw
@@ -172,7 +186,7 @@ export function parseImagePromptsResponse(raw: string): KidStoryImagePrompts | n
     if (!Array.isArray(parsed.characters)) return null;
     if (!Array.isArray(parsed.scenes)) return null;
     return {
-      style: parsed.style.trim(),
+      style: ensureGhibli(parsed.style.trim()),
       characters: parsed.characters
         .filter((c: unknown) => c && typeof c === "object")
         .map((c: { name?: unknown; description?: unknown }) => ({
@@ -184,7 +198,7 @@ export function parseImagePromptsResponse(raw: string): KidStoryImagePrompts | n
         .filter((s: unknown) => s && typeof s === "object")
         .map((s: { momentTitle?: unknown; prompt?: unknown }) => ({
           momentTitle: typeof s.momentTitle === "string" ? s.momentTitle : "",
-          prompt: typeof s.prompt === "string" ? s.prompt : "",
+          prompt: ensureGhibli(typeof s.prompt === "string" ? s.prompt : ""),
         }))
         .filter((s: { momentTitle: string; prompt: string }) => s.prompt),
       generatedAt: new Date().toISOString(),
