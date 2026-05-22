@@ -17,6 +17,7 @@ import {
   moveChapter,
   assignStoryToChapter,
 } from "../db/chapters";
+import { PrintOrderModal } from "../components/PrintOrderModal";
 import type { MemoirBook, Session, Story, Chapter } from "../db/types";
 import { formatLongDate } from "../lib/format";
 import { groupByDecade, groupByTheme } from "../lib/groupStories";
@@ -35,6 +36,7 @@ export function BookDetailScreen({ bookId }: { bookId: string }) {
   const [editing, setEditing] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
+  const [printModalOpen, setPrintModalOpen] = useState(false);
 
   async function refresh() {
     const b = await getBook(bookId);
@@ -183,29 +185,44 @@ export function BookDetailScreen({ bookId }: { bookId: string }) {
 
       {stories.length > 0 && (
         <div className="mt-14 paper-card rounded-3xl p-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
               <p className="h-serif text-xl text-ink">📕 Imprimir este libro</p>
               <p className="text-sm text-ink-soft mt-1">
-                Descarga un PDF tamaño memoir (6×9 pulgadas) con portada,
-                tabla de contenidos, capítulos y todas las historias. Listo
-                para imprenta o para enviar a Lulu/KDP.
+                Descarga el PDF tamaño memoir (6×9 pulgadas) con portada,
+                tabla de contenidos, capítulos y todas las historias — o
+                te llevamos a un servicio de impresión y te llega en físico.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={downloadMemoirPdf}
-              disabled={pdfBusy}
-              className="rounded-full bg-warm px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-warm-deep disabled:opacity-50"
-            >
-              {pdfBusy ? "Armando PDF…" : "📄 Descargar PDF"}
-            </button>
+            <div className="flex flex-col gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={downloadMemoirPdf}
+                disabled={pdfBusy}
+                className="rounded-full border border-warm/40 bg-warm-soft px-5 py-2.5 text-sm font-medium text-warm-deep hover:bg-warm/15 disabled:opacity-50"
+              >
+                {pdfBusy ? "Armando PDF…" : "📄 Solo descargar PDF"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setPrintModalOpen(true)}
+                className="rounded-full bg-warm px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-warm-deep"
+              >
+                📦 Pedir copia impresa
+              </button>
+            </div>
           </div>
           {pdfError && (
             <p className="mt-3 text-sm text-record">No se pudo generar: {pdfError}</p>
           )}
         </div>
       )}
+
+      <PrintOrderModal
+        open={printModalOpen}
+        onClose={() => setPrintModalOpen(false)}
+        onDownloadAndContinue={downloadMemoirPdf}
+      />
     </div>
   );
 }
