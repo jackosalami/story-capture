@@ -130,12 +130,12 @@ export function BookReaderScreen({ kidStoryId }: { kidStoryId: string }) {
       </header>
 
       <div
-        className="flex-1 flex items-center justify-center px-2 sm:px-6 pb-4 min-h-0"
+        className="flex-1 flex items-center justify-center px-1 sm:px-3 pb-3 min-h-0"
         style={{ perspective: "2400px" }}
       >
         <div
           key={current}
-          className="book-spread w-full h-full max-w-[1800px] flex items-center justify-center"
+          className="book-spread w-full h-full flex items-center justify-center"
           data-direction={direction}
         >
           {spread.kind === "cover" && <CoverPage story={story} cast={cast} onOpen={next} />}
@@ -372,14 +372,15 @@ function SpreadPages({
         }}
       />
 
-      {/* Left page — image, fills its half */}
-      <div className="flex-1 min-h-0 rounded-l-2xl md:rounded-r-none rounded-2xl bg-cloud shadow-xl overflow-hidden flex items-center justify-center p-2 sm:p-3">
+      {/* Left page — image, takes ~65% of width on desktop so widescreen Ghibli
+          art doesn't get letterboxed into a tiny strip. */}
+      <div className="flex-[3] md:flex-[13] min-h-0 rounded-l-2xl md:rounded-r-none rounded-2xl bg-cloud shadow-xl overflow-hidden flex items-center justify-center p-1 sm:p-2">
         {url ? (
           <img
             src={url}
             alt=""
-            className="block max-w-full max-h-full"
-            style={{ objectFit: "contain", width: "auto", height: "auto" }}
+            className="block max-w-full max-h-full w-auto h-auto"
+            style={{ objectFit: "contain" }}
           />
         ) : (
           <div className="text-center px-8">
@@ -391,9 +392,11 @@ function SpreadPages({
         )}
       </div>
 
-      {/* Right page — text, fills its half, scrolls if needed */}
+      {/* Right page — text, narrower column on desktop (~35%) to give the
+          image more breathing room. Still readable thanks to comfortable
+          line-height and the max-w-[58ch] inner cap. */}
       <div
-        className="flex-1 min-h-0 rounded-r-2xl md:rounded-l-none rounded-2xl bg-cloud shadow-xl overflow-y-auto px-6 sm:px-12 md:px-14 py-8 sm:py-12 flex flex-col"
+        className="flex-[2] md:flex-[7] min-h-0 rounded-r-2xl md:rounded-l-none rounded-2xl bg-cloud shadow-xl overflow-y-auto px-6 sm:px-10 md:px-12 py-6 sm:py-10 flex flex-col"
         style={PAGE_BG_STYLE}
       >
         {momentTitle && (
