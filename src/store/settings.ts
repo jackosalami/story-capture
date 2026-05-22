@@ -27,7 +27,7 @@ export const useSettings = create<SettingsStore>()(
       openaiApiKey: "",
       transcribeModel: "gpt-4o-mini-transcribe",
       chatModel: "gpt-4o-mini",
-      chapterModel: "gpt-4o",
+      chapterModel: "gpt-5.5",
       hasSeenWalkthrough: false,
       setApiKey: (key) => set({ openaiApiKey: key.trim() }),
       setTranscribeModel: (m) => set({ transcribeModel: m }),

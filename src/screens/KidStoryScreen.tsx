@@ -79,7 +79,10 @@ export function KidStoryScreen({ kidStoryId }: { kidStoryId: string }) {
       const content = await chat({
         model: chapterModel,
         messages: [
-          { role: "system", content: buildKidStorySystemPrompt(story.ageBand, story.targetWords) },
+          {
+            role: "system",
+            content: buildKidStorySystemPrompt(story.ageBand, story.targetWords, story.language),
+          },
           {
             role: "user",
             content: buildKidStoryUserPrompt({
@@ -88,6 +91,7 @@ export function KidStoryScreen({ kidStoryId }: { kidStoryId: string }) {
               theme: story.theme,
               forChild: story.forChild,
               targetWords: story.targetWords,
+              language: story.language,
             }),
           },
         ],
@@ -580,8 +584,13 @@ function SceneImageSlot({
   const inputId = `scene-img-${index}`;
   if (url) {
     return (
-      <div className="relative rounded-2xl overflow-hidden border-2 border-white shadow-sm">
-        <img src={url} alt="" className="block w-full h-auto" />
+      <div className="relative rounded-2xl overflow-hidden border-2 border-white shadow-sm bg-cloud">
+        <img
+          src={url}
+          alt=""
+          className="block w-full h-auto"
+          style={{ maxHeight: "60vh", objectFit: "contain" }}
+        />
         <div className="absolute top-2 right-2 flex gap-1">
           <label
             htmlFor={inputId}

@@ -92,6 +92,48 @@ export function SettingsScreen() {
 
       {settings.hasApiKey() && (
         <section className="mt-12 border-t border-ink/10 pt-8">
+          <h2 className="text-lg font-medium text-ink mb-2">Modelos de IA</h2>
+          <p className="text-sm text-ink/60 mb-4">
+            Cambia estos solo si sabes lo que haces. El modelo de capítulos se usa para escribir
+            cuentos largos e imágenes; el de chat para preguntas de seguimiento.
+          </p>
+          <div className="space-y-3">
+            <label className="block">
+              <span className="text-xs font-medium text-ink/70">Cuentos e imágenes (chapterModel)</span>
+              <input
+                type="text"
+                value={settings.chapterModel}
+                onChange={(e) => settings.setChapterModel(e.target.value)}
+                placeholder="gpt-5.5"
+                className="mt-1 w-full rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm font-mono focus:outline-none focus:border-warm focus:ring-2 focus:ring-warm/20"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs font-medium text-ink/70">Chat / preguntas (chatModel)</span>
+              <input
+                type="text"
+                value={settings.chatModel}
+                onChange={(e) => settings.setChatModel(e.target.value)}
+                placeholder="gpt-4o-mini"
+                className="mt-1 w-full rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm font-mono focus:outline-none focus:border-warm focus:ring-2 focus:ring-warm/20"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs font-medium text-ink/70">Transcripción (transcribeModel)</span>
+              <input
+                type="text"
+                value={settings.transcribeModel}
+                onChange={(e) => settings.setTranscribeModel(e.target.value)}
+                placeholder="gpt-4o-mini-transcribe"
+                className="mt-1 w-full rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm font-mono focus:outline-none focus:border-warm focus:ring-2 focus:ring-warm/20"
+              />
+            </label>
+          </div>
+        </section>
+      )}
+
+      {settings.hasApiKey() && (
+        <section className="mt-10 border-t border-ink/10 pt-8">
           <h2 className="text-lg font-medium text-ink mb-2">Ayuda</h2>
           <button
             type="button"

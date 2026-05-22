@@ -9,16 +9,19 @@ import { getKidCharactersByIds } from "../db/kidCharacters";
 import { augmentCastForPrompt } from "./characterDefaults";
 import type { KidStory } from "../db/types";
 
-// Generates Nano Banana image prompts for a finished kid story and persists them.
-// Returns true on success, false if the model returned unparseable JSON or the call failed.
 export async function generateImagePrompts(args: {
   story: KidStory;
   model: string;
 }): Promise<boolean> {
   try {
-    const characters = augmentCastForPrompt(
-      await getKidCharactersByIds(args.story.protagonistIds),
-    );
+    // Saved cast (raw — names, traits, kind, user description).
+    const rawCast = await getKidCharactersByIds(args.story.protagonistIds);
+    // For the model: hide canonical visual hints inside the description field
+    // so the model can reason about who's who. The canonical descriptions are
+    // baked into the final assembled prompt by parseImagePromptsResponse using
+    // getCanonicalForCharacter — independent of what the model writes.
+    const promptCast = augmentCastForPrompt(rawCast);
+
     const raw = await chat({
       model: args.model,
       messages: [
@@ -29,19 +32,23 @@ export async function generateImagePrompts(args: {
             storyTitle: args.story.title,
             storyContent: args.story.content,
             ageBand: args.story.ageBand,
-            characters,
+            characters: promptCast,
             setting: args.story.setting,
             theme: args.story.theme,
+            language: args.story.language,
           }),
         },
       ],
-      temperature: 0.7,
+      temperature: 0.6,
       maxTokens: 3500,
     });
-    const parsed = parseImagePromptsResponse(raw);
+
+    // Pass the RAW cast (with original names) to the parser so it can resolve
+    // names → canonical visuals + negatives via characterDefaults.
+    const parsed = parseImagePromptsResponse(raw, rawCast);
     if (!parsed) return false;
-    // Preserve any images already uploaded for the same scene index so a
-    // regenerate doesn't wipe the user's illustrations.
+
+    // Preserve uploaded images by scene index so regenerate doesn't lose them.
     const prior = args.story.imagePrompts?.scenes ?? [];
     parsed.scenes = parsed.scenes.map((scene, i) => {
       const oldScene = prior[i];

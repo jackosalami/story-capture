@@ -1,5 +1,5 @@
 import { db, newId } from "./db";
-import type { KidStory, AgeBand } from "./types";
+import type { KidStory, AgeBand, StoryLanguage } from "./types";
 
 export interface KidStoryDraft {
   title?: string;
@@ -7,6 +7,7 @@ export interface KidStoryDraft {
   setting: string;
   theme: string;
   ageBand: AgeBand;
+  language: StoryLanguage;
   forChild?: string;
   targetWords?: number;
   content?: string;
@@ -20,6 +21,7 @@ export async function createKidStory(draft: KidStoryDraft): Promise<KidStory> {
     setting: draft.setting,
     theme: draft.theme,
     ageBand: draft.ageBand,
+    language: draft.language,
     forChild: draft.forChild ?? "",
     targetWords: draft.targetWords ?? 1000,
     content: draft.content ?? "",

@@ -343,9 +343,14 @@ function SpreadPages({
         }}
       />
 
-      <div className="rounded-l-2xl md:rounded-r-none rounded-2xl bg-white shadow-xl overflow-hidden aspect-[3/4] flex items-center justify-center">
+      <div className="rounded-l-2xl md:rounded-r-none rounded-2xl bg-cloud shadow-xl overflow-hidden aspect-[3/4] flex items-center justify-center p-2">
         {url ? (
-          <img src={url} alt="" className="w-full h-full object-cover" />
+          <img
+            src={url}
+            alt=""
+            className="max-w-full max-h-full object-contain"
+            style={{ width: "100%", height: "100%", objectFit: "contain" }}
+          />
         ) : (
           <div className="text-center px-8">
             <div aria-hidden className="text-6xl mb-3 opacity-30">🖼️</div>

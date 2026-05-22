@@ -12,7 +12,7 @@ import {
 import { generateImagePrompts } from "../lib/generateImagePrompts";
 import { getKidStory } from "../db/kidStories";
 import { augmentCastForPrompt } from "../lib/characterDefaults";
-import type { AgeBand } from "../db/types";
+import type { AgeBand, StoryLanguage } from "../db/types";
 import { Sparkle, StarMascot } from "../components/Mascots";
 
 const AGE_BANDS: { value: AgeBand; label: string; emoji: string }[] = [
@@ -46,6 +46,7 @@ export function NewKidStoryScreen() {
   const [setting, setSetting] = useState("");
   const [theme, setTheme] = useState("");
   const [ageBand, setAgeBand] = useState<AgeBand>("6-8");
+  const [language, setLanguage] = useState<StoryLanguage>("es");
   const [forChild, setForChild] = useState("");
   const [targetWords, setTargetWords] = useState(1000);
   const [generating, setGenerating] = useState(false);
@@ -71,7 +72,10 @@ export function NewKidStoryScreen() {
       const content = await chat({
         model: chapterModel,
         messages: [
-          { role: "system", content: buildKidStorySystemPrompt(ageBand, targetWords) },
+          {
+            role: "system",
+            content: buildKidStorySystemPrompt(ageBand, targetWords, language),
+          },
           {
             role: "user",
             content: buildKidStoryUserPrompt({
@@ -80,6 +84,7 @@ export function NewKidStoryScreen() {
               theme,
               forChild,
               targetWords,
+              language,
             }),
           },
         ],
@@ -95,6 +100,7 @@ export function NewKidStoryScreen() {
         setting,
         theme,
         ageBand,
+        language,
         forChild,
         targetWords,
         content: body,
@@ -166,6 +172,37 @@ export function NewKidStoryScreen() {
             placeholder="Aprender a compartir, perder el miedo a la oscuridad…"
             className="w-full rounded-2xl border-2 border-night/10 bg-white px-4 py-3 text-base focus:outline-none focus:border-grape focus:ring-2 focus:ring-grape/20"
           />
+        </Field>
+
+        <Field label="¿En qué idioma?" emoji="🌍">
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setLanguage("es")}
+              className={
+                "kid-button rounded-2xl px-3 py-3 transition flex items-center justify-center gap-2 " +
+                (language === "es"
+                  ? "bg-grape text-white shadow-md"
+                  : "bg-white text-night border-2 border-night/10 hover:border-grape")
+              }
+            >
+              <span className="text-xl">🇪🇸</span>
+              <span className="h-display font-semibold">Español</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setLanguage("en")}
+              className={
+                "kid-button rounded-2xl px-3 py-3 transition flex items-center justify-center gap-2 " +
+                (language === "en"
+                  ? "bg-grape text-white shadow-md"
+                  : "bg-white text-night border-2 border-night/10 hover:border-grape")
+              }
+            >
+              <span className="text-xl">🇺🇸</span>
+              <span className="h-display font-semibold">English</span>
+            </button>
+          </div>
         </Field>
 
         <Field label="¿Para qué edad?" emoji="🎈">
