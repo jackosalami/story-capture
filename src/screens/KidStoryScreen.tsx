@@ -22,6 +22,8 @@ import {
   availableLanguages,
 } from "../lib/translateStory";
 import { shareBook, downloadBookHtml } from "../lib/shareBook";
+// downloadBookPdf is dynamically imported in doDownloadPdf() to keep the
+// heavy @react-pdf/renderer dep out of the initial bundle.
 import type { StoryLanguage } from "../db/types";
 import { Sparkle, StarMascot, avatarForKind } from "../components/Mascots";
 import { useObjectUrl } from "../lib/useObjectUrl";
@@ -55,6 +57,8 @@ export function KidStoryScreen({ kidStoryId }: { kidStoryId: string }) {
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareService, setShareService] = useState<string | null>(null);
   const [shareError, setShareError] = useState<string | null>(null);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
 
   async function refresh() {
     let s = await getKidStory(kidStoryId);
@@ -196,6 +200,24 @@ export function KidStoryScreen({ kidStoryId }: { kidStoryId: string }) {
       imagePrompts: { ...story.imagePrompts, scenes: nextScenes },
     });
     await refresh();
+  }
+
+  async function doDownloadPdf() {
+    if (!story) return;
+    setPdfError(null);
+    setPdfBusy(true);
+    try {
+      const { downloadBookPdf } = await import("../lib/generateBookPdf");
+      await downloadBookPdf({
+        story,
+        cast,
+        language: viewLanguage ?? story.language,
+      });
+    } catch (e) {
+      setPdfError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setPdfBusy(false);
+    }
   }
 
   async function doShareBook() {
@@ -714,28 +736,44 @@ export function KidStoryScreen({ kidStoryId }: { kidStoryId: string }) {
 
       {!editing && (
         <>
-          {/* Prominent share card */}
+          {/* Prominent share + print card */}
           <div className="mt-12 rounded-3xl bg-gradient-to-br from-sky-soft via-grape-soft to-strawberry-soft border-2 border-white shadow-md p-6">
-            <div className="flex flex-wrap items-center gap-4 justify-between">
+            <div className="flex flex-wrap items-start gap-4 justify-between">
               <div className="flex-1 min-w-0">
                 <p className="h-display text-xl font-semibold text-night">
-                  📤 Compartir este libro
+                  📤 Compartir o imprimir
                 </p>
                 <p className="text-sm text-night/70 mt-1">
-                  Sube el libro a un servidor público y obtén un link para mandar por WhatsApp,
-                  email, o cualquier mensajería. La persona lo abre en su navegador.
+                  Link web para mandar por WhatsApp/mail, o PDF tamaño carta listo
+                  para imprimir en casa o subir a Lulu/KDP/Mixam.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={doShareBook}
-                disabled={sharing}
-                className="btn-3d kid-button shrink-0 rounded-2xl bg-gradient-to-br from-sky to-grape text-white px-6 py-3 h-display font-semibold shadow-md disabled:opacity-50"
-                style={{ borderBottomColor: "#3aa19a" }}
-              >
-                {sharing ? "Subiendo…" : "📤 Obtener link"}
-              </button>
+              <div className="flex flex-col gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={doShareBook}
+                  disabled={sharing}
+                  className="btn-3d kid-button rounded-2xl bg-gradient-to-br from-sky to-grape text-white px-6 py-3 h-display font-semibold shadow-md disabled:opacity-50"
+                  style={{ borderBottomColor: "#3aa19a" }}
+                >
+                  {sharing ? "Subiendo…" : "📤 Obtener link"}
+                </button>
+                <button
+                  type="button"
+                  onClick={doDownloadPdf}
+                  disabled={pdfBusy}
+                  className="btn-3d kid-button rounded-2xl bg-gradient-to-br from-strawberry to-tangerine text-white px-6 py-3 h-display font-semibold shadow-md disabled:opacity-50"
+                  style={{ borderBottomColor: "#d63b73" }}
+                >
+                  {pdfBusy ? "Armando PDF…" : "📄 Descargar PDF"}
+                </button>
+              </div>
             </div>
+            {pdfError && (
+              <div className="mt-3 rounded-2xl bg-strawberry-soft border-2 border-strawberry/30 px-4 py-3 text-xs text-strawberry">
+                No se pudo generar el PDF: {pdfError}
+              </div>
+            )}
             {shareUrl && (
               <div className="mt-4 rounded-2xl bg-white border-2 border-sky/30 px-4 py-3">
                 <p className="h-display text-xs font-semibold text-night mb-2">
