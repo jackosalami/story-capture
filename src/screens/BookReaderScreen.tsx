@@ -7,7 +7,6 @@ import type { KidCharacter, KidStory } from "../db/types";
 import { splitStoryIntoSections } from "../lib/splitStory";
 import { useObjectUrl } from "../lib/useObjectUrl";
 
-// react-pageflip's TS types are a bit loose; we narrow what we need from the ref.
 interface FlipBookHandle {
   pageFlip(): {
     flipNext(): void;
@@ -26,6 +25,12 @@ interface BuiltPage {
   momentTitle?: string;
 }
 
+const PAGE_BG_STYLE: React.CSSProperties = {
+  backgroundImage:
+    "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.04 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>\")",
+  backgroundSize: "160px 160px",
+};
+
 export function BookReaderScreen({ kidStoryId }: { kidStoryId: string }) {
   const go = useNav((s) => s.go);
   const [story, setStory] = useState<KidStory | null>(null);
@@ -42,7 +47,6 @@ export function BookReaderScreen({ kidStoryId }: { kidStoryId: string }) {
     })();
   }, [kidStoryId]);
 
-  // Build the flat list of pages: cover → 5×(image, text) → back cover.
   const pages = useMemo<BuiltPage[]>(() => {
     if (!story) return [];
     const sceneCount = story.imagePrompts?.scenes.length ?? 5;
@@ -84,6 +88,8 @@ export function BookReaderScreen({ kidStoryId }: { kidStoryId: string }) {
     );
   }
 
+  const totalScenes = pages.filter((p) => p.kind === "image").length;
+
   return (
     <div className="min-h-svh flex flex-col bg-gradient-to-b from-grape-soft/30 via-cloud to-sun-soft/20">
       <header className="flex items-center justify-between px-5 py-4">
@@ -101,10 +107,9 @@ export function BookReaderScreen({ kidStoryId }: { kidStoryId: string }) {
       </header>
 
       <div className="flex-1 flex items-center justify-center px-2 sm:px-6 pb-6">
-        {/* The flipbook stretches inside this responsive wrapper */}
         <div className="w-full max-w-[1100px]">
           <HTMLFlipBook
-            ref={flipBookRef}
+            ref={flipBookRef as unknown as React.Ref<typeof HTMLFlipBook>}
             width={420}
             height={560}
             size="stretch"
@@ -132,7 +137,26 @@ export function BookReaderScreen({ kidStoryId }: { kidStoryId: string }) {
             onFlip={(e: { data: number }) => setCurrentPage(e.data)}
           >
             {pages.map((p, i) => (
-              <PageSlot key={i} page={p} totalScenes={pages.filter((x) => x.kind === "image").length} story={story} cast={cast} />
+              <PageWrapper key={i}>
+                {p.kind === "cover-front" && <CoverContent story={story} cast={cast} />}
+                {p.kind === "image" && (
+                  <ImageContent
+                    imageBlob={p.imageBlob}
+                    momentTitle={p.momentTitle ?? ""}
+                    sceneIndex={p.sceneIndex ?? 0}
+                    totalScenes={totalScenes}
+                  />
+                )}
+                {p.kind === "text" && (
+                  <TextContent
+                    text={p.text ?? ""}
+                    momentTitle={p.momentTitle ?? ""}
+                    sceneIndex={p.sceneIndex ?? 0}
+                    totalScenes={totalScenes}
+                  />
+                )}
+                {p.kind === "cover-back" && <BackContent story={story} cast={cast} />}
+              </PageWrapper>
             ))}
           </HTMLFlipBook>
         </div>
@@ -175,42 +199,24 @@ function pageLabel(pages: BuiltPage[], i: number): string {
   return `Escena ${sceneNumber} de ${sceneCount}`;
 }
 
-// One page of the book. Forwarded refs are important for react-pageflip,
-// but for now we just style as a leaf div — the library wraps each child
-// in its own internal page container.
-function PageSlot({
-  page,
-  story,
-  cast,
-  totalScenes,
-}: {
-  page: BuiltPage;
-  story: KidStory;
-  cast: KidCharacter[];
-  totalScenes: number;
-}) {
-  if (page.kind === "cover-front") return <CoverPage story={story} cast={cast} />;
-  if (page.kind === "cover-back") return <BackPage story={story} cast={cast} />;
-  if (page.kind === "image") {
-    return <ImagePage imageBlob={page.imageBlob} momentTitle={page.momentTitle ?? ""} sceneIndex={page.sceneIndex ?? 0} totalScenes={totalScenes} />;
-  }
-  return <TextPage text={page.text ?? ""} momentTitle={page.momentTitle ?? ""} sceneIndex={page.sceneIndex ?? 0} totalScenes={totalScenes} />;
+// Each direct child of HTMLFlipBook MUST be a div the library can attach a ref
+// to. A function component that returns JSX without forwardRef does NOT work —
+// that was the bug: pages didn't register and the lector jumped to the back.
+function PageWrapper({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="w-full h-full">
+      {children}
+    </div>
+  );
 }
 
-// --- Page templates ---
+// --- Page content components (rendered inside PageWrapper) ---
 
-const PAGE_BG_STYLE: React.CSSProperties = {
-  backgroundImage:
-    // Subtle paper grain via inline SVG noise — gives every page a hand-made feel
-    "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.04 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>\")",
-  backgroundSize: "160px 160px",
-};
-
-function CoverPage({ story, cast }: { story: KidStory; cast: KidCharacter[] }) {
+function CoverContent({ story, cast }: { story: KidStory; cast: KidCharacter[] }) {
   const coverBlob = story.imagePrompts?.scenes.find((s) => s.image)?.image;
   const url = useObjectUrl(coverBlob);
   return (
-    <div className="absolute inset-0 rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-br from-grape via-strawberry to-tangerine text-white">
+    <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-br from-grape via-strawberry to-tangerine text-white">
       {url && (
         <img src={url} alt="" className="absolute inset-0 w-full h-full object-cover opacity-80 mix-blend-multiply" />
       )}
@@ -237,17 +243,14 @@ function CoverPage({ story, cast }: { story: KidStory; cast: KidCharacter[] }) {
           Toca la esquina o desliza para abrir →
         </p>
       </div>
-      {/* Spine highlight on left edge */}
       <div aria-hidden className="absolute inset-y-0 left-0 w-2 bg-black/30 shadow-inner" />
     </div>
   );
 }
 
-function BackPage({ story, cast }: { story: KidStory; cast: KidCharacter[] }) {
+function BackContent({ story, cast }: { story: KidStory; cast: KidCharacter[] }) {
   return (
-    <div
-      className="absolute inset-0 rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-br from-night via-grape to-strawberry text-white p-8 flex flex-col items-center justify-center text-center"
-    >
+    <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-br from-night via-grape to-strawberry text-white p-8 flex flex-col items-center justify-center text-center">
       <p className="h-display text-5xl mb-3">Fin</p>
       <p className="opacity-85 max-w-xs">{story.title || "Cuento"}</p>
       {cast.length > 0 && (
@@ -260,7 +263,7 @@ function BackPage({ story, cast }: { story: KidStory; cast: KidCharacter[] }) {
   );
 }
 
-function ImagePage({
+function ImageContent({
   imageBlob,
   momentTitle,
   sceneIndex,
@@ -274,7 +277,7 @@ function ImagePage({
   const url = useObjectUrl(imageBlob);
   return (
     <div
-      className="absolute inset-0 rounded-2xl overflow-hidden bg-cloud shadow-lg flex items-center justify-center"
+      className="relative w-full h-full rounded-2xl overflow-hidden bg-cloud shadow-lg flex items-center justify-center"
       style={PAGE_BG_STYLE}
     >
       {url ? (
@@ -299,7 +302,7 @@ function ImagePage({
   );
 }
 
-function TextPage({
+function TextContent({
   text,
   momentTitle,
   sceneIndex,
@@ -312,7 +315,7 @@ function TextPage({
 }) {
   return (
     <div
-      className="absolute inset-0 rounded-2xl bg-cloud shadow-lg px-7 py-9 sm:px-10 sm:py-12 overflow-y-auto"
+      className="relative w-full h-full rounded-2xl bg-cloud shadow-lg px-7 py-9 sm:px-10 sm:py-12 overflow-y-auto"
       style={PAGE_BG_STYLE}
     >
       {momentTitle && (

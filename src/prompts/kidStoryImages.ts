@@ -160,14 +160,51 @@ export function buildImagePromptsUserPrompt(args: {
 }
 
 const GHIBLI_PREFIX =
-  "Studio Ghibli hand-drawn 2D animation style, soft watercolor painted backgrounds with delicate hand-inked lines, warm earth-tone palette, expressive characters with round soulful eyes and Ghibli proportions, soft golden-hour lighting, cinematic 16:9 widescreen composition. ";
+  "Studio Ghibli inspired art, hand-drawn 2D animation style, soft watercolor painted backgrounds with delicate hand-inked lines, warm earth-tone palette, expressive characters with round soulful eyes and Ghibli proportions, soft golden-hour lighting, cinematic 16:9 widescreen composition. ";
 
 // Safety net: if the model forgot to mention "Studio Ghibli" in a scene prompt
 // or the style paragraph, prepend the canonical phrase so Nano Banana still
-// gets the right look. Cheap insurance for the case where the model drifts.
+// gets the right look. Cheap insurance for when the model drifts.
 function ensureGhibli(text: string): string {
   if (/studio ghibli/i.test(text)) return text;
   return GHIBLI_PREFIX + text;
+}
+
+// Detect which canonical characters are mentioned in a scene prompt by name.
+// We don't trust the model to honor character continuity — we re-inject the
+// canonical visual reference for every character that appears in the scene.
+function detectCharactersInScene(
+  sceneText: string,
+  characters: { name: string; description: string }[],
+): { name: string; description: string }[] {
+  const lower = sceneText.toLowerCase();
+  return characters.filter((c) => {
+    const name = c.name.trim().toLowerCase();
+    if (!name) return false;
+    // Word-boundary-ish match — avoid "Cami" matching "camino".
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(`(^|[^a-záéíóúüñ])${escaped}([^a-záéíóúüñ]|$)`, "i");
+    return re.test(lower);
+  });
+}
+
+// Append a "CHARACTER REFERENCES" block to every scene prompt so Nano Banana
+// always sees the canonical visual identity of every character present —
+// regardless of whether the model bothered to inline them properly.
+function reinforceCharactersInScene(
+  sceneText: string,
+  characters: { name: string; description: string }[],
+): string {
+  const present = detectCharactersInScene(sceneText, characters);
+  if (present.length === 0) return sceneText;
+  const refs = present
+    .map((c) => `• ${c.name}: ${c.description}`)
+    .join("\n");
+  return (
+    sceneText.trim() +
+    "\n\nCHARACTER REFERENCES (Nano Banana MUST render these visuals EXACTLY — do not change hair color, hairstyle, skin tone, clothing, or any other feature between images):\n" +
+    refs
+  );
 }
 
 export function parseImagePromptsResponse(raw: string): KidStoryImagePrompts | null {
@@ -185,22 +222,33 @@ export function parseImagePromptsResponse(raw: string): KidStoryImagePrompts | n
     if (typeof parsed.style !== "string") return null;
     if (!Array.isArray(parsed.characters)) return null;
     if (!Array.isArray(parsed.scenes)) return null;
+
+    const characters = parsed.characters
+      .filter((c: unknown) => c && typeof c === "object")
+      .map((c: { name?: unknown; description?: unknown }) => ({
+        name: typeof c.name === "string" ? c.name : "",
+        description: typeof c.description === "string" ? c.description : "",
+      }))
+      .filter((c: { name: string; description: string }) => c.name && c.description);
+
+    const scenes = parsed.scenes
+      .filter((s: unknown) => s && typeof s === "object")
+      .map((s: { momentTitle?: unknown; prompt?: unknown }) => {
+        const promptText = typeof s.prompt === "string" ? s.prompt : "";
+        // Two-step safety: Ghibli phrase first, then character references.
+        const withGhibli = ensureGhibli(promptText);
+        const withCharRefs = reinforceCharactersInScene(withGhibli, characters);
+        return {
+          momentTitle: typeof s.momentTitle === "string" ? s.momentTitle : "",
+          prompt: withCharRefs,
+        };
+      })
+      .filter((s: { momentTitle: string; prompt: string }) => s.prompt);
+
     return {
       style: ensureGhibli(parsed.style.trim()),
-      characters: parsed.characters
-        .filter((c: unknown) => c && typeof c === "object")
-        .map((c: { name?: unknown; description?: unknown }) => ({
-          name: typeof c.name === "string" ? c.name : "",
-          description: typeof c.description === "string" ? c.description : "",
-        }))
-        .filter((c: { name: string; description: string }) => c.name && c.description),
-      scenes: parsed.scenes
-        .filter((s: unknown) => s && typeof s === "object")
-        .map((s: { momentTitle?: unknown; prompt?: unknown }) => ({
-          momentTitle: typeof s.momentTitle === "string" ? s.momentTitle : "",
-          prompt: ensureGhibli(typeof s.prompt === "string" ? s.prompt : ""),
-        }))
-        .filter((s: { momentTitle: string; prompt: string }) => s.prompt),
+      characters,
+      scenes,
       generatedAt: new Date().toISOString(),
     };
   } catch {

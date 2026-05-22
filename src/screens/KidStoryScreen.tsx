@@ -172,6 +172,26 @@ export function KidStoryScreen({ kidStoryId }: { kidStoryId: string }) {
     await refresh();
   }
 
+  async function uploadAllSceneImages(files: FileList) {
+    if (!story || !story.imagePrompts) return;
+    // Sort files by name so 1.png → slot 1, 2.png → slot 2, etc.
+    const sorted = Array.from(files)
+      .filter((f) => f.type.startsWith("image/"))
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" }));
+    if (sorted.length === 0) return;
+    const { resizeImage } = await import("../lib/image");
+    const sceneCount = story.imagePrompts.scenes.length;
+    const updated = [...story.imagePrompts.scenes];
+    for (let i = 0; i < Math.min(sorted.length, sceneCount); i++) {
+      const r = await resizeImage(sorted[i], 1600, 0.9);
+      updated[i] = { ...updated[i], image: r.blob, imageMimeType: r.mimeType };
+    }
+    await updateKidStory(story.id, {
+      imagePrompts: { ...story.imagePrompts, scenes: updated },
+    });
+    await refresh();
+  }
+
   if (!story) {
     return (
       <div className="mx-auto max-w-2xl px-6 py-10">
@@ -354,11 +374,45 @@ export function KidStoryScreen({ kidStoryId }: { kidStoryId: string }) {
                     : "✨ Generar prompts"}
               </button>
             </div>
-            <p className="text-sm text-night/65 mb-5">
+            <p className="text-sm text-night/65 mb-3">
               Cinco prompts en inglés optimizados para Gemini Nano Banana. Cópialos uno por uno
               y pégalos en Gemini para crear las ilustraciones del cuento. Los personajes mantienen
               la misma apariencia en las cinco imágenes.
             </p>
+
+            {story.imagePrompts && (
+              <div className="mb-5 rounded-2xl bg-sun-soft/70 border-2 border-sun/40 px-5 py-4">
+                <p className="h-display text-sm font-semibold text-night mb-1">
+                  📥 Subir todas las imágenes a la vez
+                </p>
+                <p className="text-xs text-night/65 mb-3">
+                  Nombra tus archivos <code className="font-mono bg-white/70 px-1 rounded">1</code>,{" "}
+                  <code className="font-mono bg-white/70 px-1 rounded">2</code>,{" "}
+                  <code className="font-mono bg-white/70 px-1 rounded">3</code>,{" "}
+                  <code className="font-mono bg-white/70 px-1 rounded">4</code>,{" "}
+                  <code className="font-mono bg-white/70 px-1 rounded">5</code> (.png, .jpg…) y arrástralos aquí —
+                  yo los asigno por orden de nombre. Cualquier nombre vale mientras se ordenen bien (1, 2, 3 o nombre1, nombre2…).
+                </p>
+                <label className="inline-block">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files.length > 0) {
+                        uploadAllSceneImages(e.target.files);
+                      }
+                      e.target.value = "";
+                    }}
+                  />
+                  <span className="btn-3d kid-button inline-block rounded-full bg-sun text-night px-4 py-1.5 text-xs h-display font-semibold cursor-pointer"
+                        style={{ borderBottomColor: "#a37510" }}>
+                    Subir varias imágenes
+                  </span>
+                </label>
+              </div>
+            )}
 
             {imagePromptsError && (
               <div className="mb-4 rounded-2xl bg-strawberry-soft border-2 border-strawberry/30 px-5 py-3 text-sm text-strawberry">
