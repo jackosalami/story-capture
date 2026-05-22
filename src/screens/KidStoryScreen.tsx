@@ -57,8 +57,15 @@ export function KidStoryScreen({ kidStoryId }: { kidStoryId: string }) {
   const [shareError, setShareError] = useState<string | null>(null);
 
   async function refresh() {
-    const s = await getKidStory(kidStoryId);
+    let s = await getKidStory(kidStoryId);
     if (!s) return;
+    // Backfill for stories created before the language field existed.
+    // Without this, the translate button shows the wrong direction
+    // ("Traducir a español" on a story already in Spanish).
+    if (!s.language) {
+      await updateKidStory(s.id, { language: "es" });
+      s = { ...s, language: "es" };
+    }
     setStory(s);
     setDraftTitle(s.title);
     setDraftContent(s.content);

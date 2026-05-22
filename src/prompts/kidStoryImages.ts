@@ -26,7 +26,10 @@ import type {
 import { getCanonicalForCharacter } from "../lib/characterDefaults";
 
 const STYLE_BLOCK =
-  "Studio Ghibli inspired art, hand-drawn 2D animation style, soft watercolor painted backgrounds with delicate hand-inked lines, warm earth-tone palette, expressive characters with round soulful eyes and Ghibli proportions, soft golden-hour lighting, cinematic 16:9 widescreen composition, every character fully visible within the frame with comfortable headroom.";
+  "Studio Ghibli inspired art, hand-drawn 2D animation style, soft watercolor painted backgrounds with delicate hand-inked lines, warm earth-tone palette, expressive characters with round soulful eyes and Ghibli proportions, soft golden-hour lighting. " +
+  "PORTRAIT 3:4 vertical composition like a children's storybook page (suitable for printing on 8.5×11 letter-size paper). " +
+  "Subject centered in the frame with comfortable padding on the left and right — characters live in the middle third horizontally, NOT spread edge to edge. Compose like a book illustration, not a movie still. " +
+  "No text, no words, no signage, no captions, no watermarks, no logos, no signatures, no Gemini or AI-generated labels, no color stripes — clean illustration only.";
 
 export const IMAGE_PROMPTS_SYSTEM_PROMPT = `You produce structured image-generation data for a finished kid story. Your output is consumed by a post-processor that ASSEMBLES the final Nano Banana prompts — so you do NOT write character physical descriptions in the scene prompts. The post-processor will inject canonical character descriptions itself.
 
