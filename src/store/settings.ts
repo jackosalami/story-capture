@@ -9,6 +9,7 @@ export interface Settings {
   transcribeModel: string;
   chatModel: string;
   chapterModel: string;
+  hasSeenWalkthrough: boolean;
 }
 
 interface SettingsStore extends Settings {
@@ -16,6 +17,7 @@ interface SettingsStore extends Settings {
   setTranscribeModel: (m: string) => void;
   setChatModel: (m: string) => void;
   setChapterModel: (m: string) => void;
+  setHasSeenWalkthrough: (v: boolean) => void;
   hasApiKey: () => boolean;
 }
 
@@ -26,10 +28,12 @@ export const useSettings = create<SettingsStore>()(
       transcribeModel: "gpt-4o-mini-transcribe",
       chatModel: "gpt-4o-mini",
       chapterModel: "gpt-4o",
+      hasSeenWalkthrough: false,
       setApiKey: (key) => set({ openaiApiKey: key.trim() }),
       setTranscribeModel: (m) => set({ transcribeModel: m }),
       setChatModel: (m) => set({ chatModel: m }),
       setChapterModel: (m) => set({ chapterModel: m }),
+      setHasSeenWalkthrough: (v) => set({ hasSeenWalkthrough: v }),
       hasApiKey: () => get().openaiApiKey.length > 0,
     }),
     { name: "story-capture-settings" },

@@ -4,6 +4,7 @@ import { getStory, updateStory, linkCharacterToStory } from "../db/stories";
 import { CharacterPicker } from "../components/CharacterPicker";
 import { ChipPicker } from "../components/ChipPicker";
 import { ENVIRONMENT_CHIPS, MOOD_CHIPS } from "../lib/constants";
+import { db } from "../db/db";
 
 interface Props {
   storyId: string;
@@ -17,6 +18,8 @@ export function StorySetupScreen({ storyId, sessionId }: Props) {
   const [environment, setEnvironment] = useState<string[]>([]);
   const [characterIds, setCharacterIds] = useState<string[]>([]);
   const [mood, setMood] = useState<string[]>([]);
+  const [topicPrompt, setTopicPrompt] = useState<string | null>(null);
+  const [showRecall, setShowRecall] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -28,8 +31,10 @@ export function StorySetupScreen({ storyId, sessionId }: Props) {
       setEnvironment(s.environment ? s.environment.split(", ").filter(Boolean) : []);
       setCharacterIds(s.characterIds);
       setMood(s.mood);
+      const sess = await db.sessions.get(sessionId);
+      if (sess?.topicPrompt) setTopicPrompt(sess.topicPrompt);
     })();
-  }, [storyId]);
+  }, [storyId, sessionId]);
 
   async function startRecording() {
     setSaving(true);
@@ -60,10 +65,52 @@ export function StorySetupScreen({ storyId, sessionId }: Props) {
       </header>
 
       <h1 className="text-3xl font-medium text-ink mb-2">Cuéntame de esta historia</h1>
-      <p className="text-base text-ink/60 mb-8">
+      <p className="text-base text-ink/60 mb-6">
         Estos detalles me ayudan a organizar tus historias. Puedes saltar cualquier
         pregunta y volver a editar después.
       </p>
+
+      {topicPrompt && (
+        <div className="mb-6 rounded-xl bg-warm-soft border border-warm/30 px-5 py-4">
+          <p className="text-xs uppercase tracking-wide text-warm font-medium mb-1">
+            Tema de hoy
+          </p>
+          <p className="text-base text-ink leading-relaxed">{topicPrompt}</p>
+        </div>
+      )}
+
+      <div className="mb-8 rounded-xl border border-ink/10 bg-white">
+        <button
+          type="button"
+          onClick={() => setShowRecall((v) => !v)}
+          className="w-full text-left px-5 py-3 flex items-center justify-between"
+        >
+          <span className="text-sm font-medium text-ink">
+            ✨ Cosas que ayudan a recordar mejor
+          </span>
+          <span className="text-ink/50 text-sm">{showRecall ? "−" : "+"}</span>
+        </button>
+        {showRecall && (
+          <div className="px-5 pb-5 -mt-1 text-sm text-ink/75 leading-relaxed space-y-2">
+            <p>Cierra los ojos un momento y vuelve a aquel lugar. Piensa en:</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>El clima — ¿hacía frío, calor, llovía, había sol?</li>
+              <li>La hora — ¿era de mañana, mediodía, noche?</li>
+              <li>Los olores — ¿qué se cocinaba? ¿olía a tierra mojada, a leña, a perfume?</li>
+              <li>La comida — ¿qué estabas comiendo o bebiendo? ¿quién la preparó?</li>
+              <li>Los sonidos — ¿voces, música, animales, silencio?</li>
+              <li>Las caras — ¿quién estaba? ¿cómo era su voz, su risa?</li>
+              <li>La ropa — ¿qué llevabas puesto tú? ¿y los demás?</li>
+              <li>Las texturas — ¿el suelo, las paredes, la tela de tu vestido?</li>
+              <li>Lo que sentías por dentro — ¿alegría, miedo, vergüenza, paz?</li>
+            </ul>
+            <p className="pt-2 text-ink/65">
+              No tienes que contestar todo esto. Solo deja que los detalles vuelvan,
+              y cuando empieces a grabar, deja que salga como salga.
+            </p>
+          </div>
+        )}
+      </div>
 
       <div className="space-y-8">
         <Field label="¿Cuándo pasó esto?" hint="Ejemplos: «primavera de 1972», «cuando tenía 8 años»">

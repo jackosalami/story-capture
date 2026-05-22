@@ -6,6 +6,8 @@ import { create } from "zustand";
 export type Screen =
   | { name: "dashboard" }
   | { name: "settings" }
+  | { name: "walkthrough" }
+  | { name: "topics" }
   | { name: "story-setup"; storyId: string; sessionId: string }
   | { name: "record"; sessionId: string }
   | { name: "story"; storyId: string }

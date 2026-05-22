@@ -92,6 +92,19 @@ export function SettingsScreen() {
 
       {settings.hasApiKey() && (
         <section className="mt-12 border-t border-ink/10 pt-8">
+          <h2 className="text-lg font-medium text-ink mb-2">Ayuda</h2>
+          <button
+            type="button"
+            onClick={() => go({ name: "walkthrough" })}
+            className="text-sm text-warm hover:underline"
+          >
+            Ver el tutorial otra vez
+          </button>
+        </section>
+      )}
+
+      {settings.hasApiKey() && (
+        <section className="mt-10 border-t border-ink/10 pt-8">
           <h2 className="text-lg font-medium text-ink mb-2">Exportar todo</h2>
           <p className="text-sm text-ink/60 mb-4">
             Descarga un archivo JSON con todas tus historias, personajes, transcripciones

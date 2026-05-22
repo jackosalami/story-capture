@@ -37,6 +37,13 @@ export function DashboardScreen() {
         <nav className="flex items-center gap-4 text-sm">
           <button
             type="button"
+            onClick={() => go({ name: "walkthrough" })}
+            className="text-ink/70 hover:text-ink"
+          >
+            ¿Cómo funciona?
+          </button>
+          <button
+            type="button"
             onClick={() => go({ name: "characters" })}
             className="text-ink/70 hover:text-ink"
           >
@@ -52,13 +59,22 @@ export function DashboardScreen() {
         </nav>
       </header>
 
-      <button
-        type="button"
-        onClick={startNewStory}
-        className="w-full rounded-2xl bg-warm px-8 py-8 text-2xl font-medium text-white shadow-md hover:bg-warm/90 active:scale-[0.99] transition"
-      >
-        Nueva historia
-      </button>
+      <div className="space-y-3">
+        <button
+          type="button"
+          onClick={startNewStory}
+          className="w-full rounded-2xl bg-warm px-8 py-8 text-2xl font-medium text-white shadow-md hover:bg-warm/90 active:scale-[0.99] transition"
+        >
+          Nueva historia
+        </button>
+        <button
+          type="button"
+          onClick={() => go({ name: "topics" })}
+          className="w-full rounded-xl border border-warm/40 bg-warm-soft px-6 py-4 text-base text-warm hover:bg-warm/10 transition"
+        >
+          ¿De qué hablar hoy?
+        </button>
+      </div>
 
       {stories && stories.length > 0 && (
         <div className="mt-10 flex gap-1 rounded-lg bg-ink/5 p-1">
