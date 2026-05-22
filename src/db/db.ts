@@ -63,6 +63,18 @@ class StoryCaptureDB extends Dexie {
       memoirBooks: "id, isActive, createdAt",
       characterMentions: "id, storyId, sessionId, bookId, status, createdAt",
     });
+    // v5: book-organizational chapters (Wave C Phase 3)
+    this.version(5).stores({
+      sessions: "id, date, status, storyId, bookId",
+      segments: "id, sessionId, order, timestamp",
+      stories: "id, createdAt, storyDate, bookId, chapterId",
+      characters: "id, name",
+      chapters: "id, bookId, order, createdAt",
+      kidCharacters: "id, name, createdAt",
+      kidStories: "id, createdAt",
+      memoirBooks: "id, isActive, createdAt",
+      characterMentions: "id, storyId, sessionId, bookId, status, createdAt",
+    });
   }
 }
 

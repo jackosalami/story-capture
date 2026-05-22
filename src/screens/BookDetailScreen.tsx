@@ -9,21 +9,32 @@ import {
   updateBook,
   deleteBook,
 } from "../db/memoirBooks";
-import type { MemoirBook, Session, Story } from "../db/types";
+import {
+  listChaptersInBook,
+  createChapter,
+  updateChapter,
+  deleteChapter,
+  moveChapter,
+  assignStoryToChapter,
+} from "../db/chapters";
+import type { MemoirBook, Session, Story, Chapter } from "../db/types";
 import { formatLongDate } from "../lib/format";
 import { groupByDecade, groupByTheme } from "../lib/groupStories";
 import { useObjectUrl } from "../lib/useObjectUrl";
 import { resizeImage } from "../lib/image";
 
-type View = "chrono" | "theme" | "session";
+type View = "chrono" | "theme" | "session" | "chapters";
 
 export function BookDetailScreen({ bookId }: { bookId: string }) {
   const go = useNav((s) => s.go);
   const [book, setBook] = useState<MemoirBook | null>(null);
   const [stories, setStories] = useState<Story[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [chapters, setChapters] = useState<Chapter[]>([]);
   const [view, setView] = useState<View>("chrono");
   const [editing, setEditing] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
 
   async function refresh() {
     const b = await getBook(bookId);
@@ -36,6 +47,21 @@ export function BookDetailScreen({ bookId }: { bookId: string }) {
     ]);
     setStories(allStories.filter((s) => s.bookId === bookId));
     setSessions(allSessions.filter((s) => s.bookId === bookId).sort((a, b) => (a.date < b.date ? 1 : -1)));
+    setChapters(await listChaptersInBook(bookId));
+  }
+
+  async function downloadMemoirPdf() {
+    if (!book) return;
+    setPdfError(null);
+    setPdfBusy(true);
+    try {
+      const { downloadMemoirBookPdf } = await import("../lib/generateMemoirPdf");
+      await downloadMemoirBookPdf({ book, stories, chapters });
+    } catch (e) {
+      setPdfError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setPdfBusy(false);
+    }
   }
 
   useEffect(() => {
@@ -118,8 +144,8 @@ export function BookDetailScreen({ bookId }: { bookId: string }) {
       </button>
 
       {stories.length > 0 && (
-        <div className="mt-10 flex justify-center">
-          <div className="inline-flex gap-1 rounded-full bg-paper-deep/70 border border-ink/5 p-1 text-sm">
+        <div className="mt-10 flex flex-col items-center gap-3">
+          <div className="inline-flex gap-1 rounded-full bg-paper-deep/70 border border-ink/5 p-1 text-sm flex-wrap justify-center">
             <ViewTab active={view === "chrono"} onClick={() => setView("chrono")}>
               Cronológica
             </ViewTab>
@@ -128,6 +154,9 @@ export function BookDetailScreen({ bookId }: { bookId: string }) {
             </ViewTab>
             <ViewTab active={view === "session"} onClick={() => setView("session")}>
               Por sesión
+            </ViewTab>
+            <ViewTab active={view === "chapters"} onClick={() => setView("chapters")}>
+              Capítulos
             </ViewTab>
           </div>
         </div>
@@ -140,10 +169,43 @@ export function BookDetailScreen({ bookId }: { bookId: string }) {
           <ChronoView stories={stories} />
         ) : view === "theme" ? (
           <ThemeView stories={stories} />
-        ) : (
+        ) : view === "session" ? (
           <SessionView sessions={sessions} stories={stories} />
+        ) : (
+          <ChaptersView
+            bookId={bookId}
+            chapters={chapters}
+            stories={stories}
+            onRefresh={refresh}
+          />
         )}
       </div>
+
+      {stories.length > 0 && (
+        <div className="mt-14 paper-card rounded-3xl p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="h-serif text-xl text-ink">📕 Imprimir este libro</p>
+              <p className="text-sm text-ink-soft mt-1">
+                Descarga un PDF tamaño memoir (6×9 pulgadas) con portada,
+                tabla de contenidos, capítulos y todas las historias. Listo
+                para imprenta o para enviar a Lulu/KDP.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={downloadMemoirPdf}
+              disabled={pdfBusy}
+              className="rounded-full bg-warm px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-warm-deep disabled:opacity-50"
+            >
+              {pdfBusy ? "Armando PDF…" : "📄 Descargar PDF"}
+            </button>
+          </div>
+          {pdfError && (
+            <p className="mt-3 text-sm text-record">No se pudo generar: {pdfError}</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -526,5 +588,311 @@ function SessionView({ sessions, stories }: { sessions: Session[]; stories: Stor
         );
       })}
     </ul>
+  );
+}
+
+// ---- Capítulos view ----
+// Lists chapters in order with their stories under each. "Sin capítulo" group
+// at the end. Admin can: create chapters, edit title, move up/down, delete,
+// and assign/unassign stories via a select on each story card.
+
+function ChaptersView({
+  bookId,
+  chapters,
+  stories,
+  onRefresh,
+}: {
+  bookId: string;
+  chapters: Chapter[];
+  stories: Story[];
+  onRefresh: () => Promise<void>;
+}) {
+  const [showCreate, setShowCreate] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newDesc, setNewDesc] = useState("");
+
+  async function createNew() {
+    if (!newTitle.trim()) return;
+    await createChapter({ bookId, title: newTitle, description: newDesc });
+    setNewTitle("");
+    setNewDesc("");
+    setShowCreate(false);
+    await onRefresh();
+  }
+
+  const storiesByChapter = new Map<string, Story[]>();
+  const unassigned: Story[] = [];
+  for (const s of stories) {
+    if (s.chapterId) {
+      const list = storiesByChapter.get(s.chapterId) ?? [];
+      list.push(s);
+      storiesByChapter.set(s.chapterId, list);
+    } else {
+      unassigned.push(s);
+    }
+  }
+  for (const list of storiesByChapter.values()) {
+    list.sort((a, b) => (a.storyDate || "").localeCompare(b.storyDate || ""));
+  }
+  unassigned.sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1));
+
+  return (
+    <div className="space-y-8">
+      {chapters.map((ch, i) => (
+        <ChapterBlock
+          key={ch.id}
+          chapter={ch}
+          stories={storiesByChapter.get(ch.id) ?? []}
+          allChapters={chapters}
+          isFirst={i === 0}
+          isLast={i === chapters.length - 1}
+          onRefresh={onRefresh}
+        />
+      ))}
+
+      {unassigned.length > 0 && (
+        <section>
+          <h2 className="h-serif text-2xl text-ink-soft mb-4 italic">Sin capítulo</h2>
+          <ul className="space-y-3">
+            {unassigned.map((s) => (
+              <li key={s.id}>
+                <StoryCardWithChapter story={s} chapters={chapters} onRefresh={onRefresh} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {showCreate ? (
+        <div className="paper-card rounded-2xl p-5 space-y-3">
+          <h3 className="h-serif text-xl text-ink">Nuevo capítulo</h3>
+          <input
+            type="text"
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            autoFocus
+            placeholder="Capítulo I: Los años de la infancia"
+            className="w-full rounded-lg border border-ink/15 bg-white px-3 py-2 text-base h-serif"
+          />
+          <textarea
+            value={newDesc}
+            onChange={(e) => setNewDesc(e.target.value)}
+            rows={2}
+            placeholder="Breve descripción de qué contiene este capítulo (opcional)"
+            className="w-full rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm"
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={createNew}
+              disabled={!newTitle.trim()}
+              className="rounded-full bg-warm px-5 py-2 text-sm font-medium text-white hover:bg-warm-deep disabled:opacity-50"
+            >
+              Crear capítulo
+            </button>
+            <button
+              type="button"
+              onClick={() => { setShowCreate(false); setNewTitle(""); setNewDesc(""); }}
+              className="rounded-full px-4 py-2 text-sm text-ink-soft hover:text-ink"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setShowCreate(true)}
+          className="text-sm text-warm-deep hover:underline"
+        >
+          + Crear capítulo
+        </button>
+      )}
+    </div>
+  );
+}
+
+function ChapterBlock({
+  chapter,
+  stories,
+  allChapters,
+  isFirst,
+  isLast,
+  onRefresh,
+}: {
+  chapter: Chapter;
+  stories: Story[];
+  allChapters: Chapter[];
+  isFirst: boolean;
+  isLast: boolean;
+  onRefresh: () => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [title, setTitle] = useState(chapter.title);
+  const [description, setDescription] = useState(chapter.description);
+
+  async function save() {
+    await updateChapter(chapter.id, {
+      title: title.trim() || "Sin título",
+      description: description.trim(),
+    });
+    setEditing(false);
+    await onRefresh();
+  }
+
+  async function remove() {
+    if (!confirm(`¿Eliminar el capítulo "${chapter.title}"? Las historias se quedan en el libro sin capítulo.`)) return;
+    await deleteChapter(chapter.id);
+    await onRefresh();
+  }
+
+  async function move(dir: "up" | "down") {
+    await moveChapter(chapter.id, dir);
+    await onRefresh();
+  }
+
+  return (
+    <section className="paper-card rounded-2xl px-5 py-5">
+      <header className="flex items-baseline justify-between gap-3 mb-3">
+        {editing ? (
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="flex-1 rounded-lg border border-ink/15 bg-white px-3 py-1.5 h-serif text-xl"
+          />
+        ) : (
+          <h2 className="h-serif text-2xl text-ink">{chapter.title}</h2>
+        )}
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            onClick={() => move("up")}
+            disabled={isFirst}
+            aria-label="Subir capítulo"
+            className="size-7 rounded-full text-ink-soft hover:text-ink hover:bg-ink/5 disabled:opacity-30 disabled:hover:bg-transparent text-xs"
+          >
+            ▲
+          </button>
+          <button
+            type="button"
+            onClick={() => move("down")}
+            disabled={isLast}
+            aria-label="Bajar capítulo"
+            className="size-7 rounded-full text-ink-soft hover:text-ink hover:bg-ink/5 disabled:opacity-30 disabled:hover:bg-transparent text-xs"
+          >
+            ▼
+          </button>
+          <button
+            type="button"
+            onClick={() => setEditing((v) => !v)}
+            className="ml-2 text-xs text-warm-deep hover:underline"
+          >
+            {editing ? "Cancelar" : "Editar"}
+          </button>
+        </div>
+      </header>
+
+      {editing ? (
+        <div className="space-y-3 mb-4">
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={2}
+            placeholder="Descripción del capítulo"
+            className="w-full rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm"
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={save}
+              className="rounded-full bg-warm px-4 py-1.5 text-sm font-medium text-white"
+            >
+              Guardar
+            </button>
+            <button
+              type="button"
+              onClick={remove}
+              className="ml-auto text-xs text-record hover:underline"
+            >
+              Eliminar capítulo
+            </button>
+          </div>
+        </div>
+      ) : (
+        chapter.description && (
+          <p className="text-sm text-ink-soft italic mb-3">{chapter.description}</p>
+        )
+      )}
+
+      {stories.length === 0 ? (
+        <p className="text-sm text-ink-soft/70 italic">Sin historias asignadas todavía.</p>
+      ) : (
+        <ul className="space-y-3">
+          {stories.map((s) => (
+            <li key={s.id}>
+              <StoryCardWithChapter story={s} chapters={allChapters} onRefresh={onRefresh} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+// Story card with an inline "Move to chapter" select for chapter management.
+function StoryCardWithChapter({
+  story,
+  chapters,
+  onRefresh,
+}: {
+  story: Story;
+  chapters: Chapter[];
+  onRefresh: () => Promise<void>;
+}) {
+  const go = useNav((s) => s.go);
+  const title = story.title || "Historia sin título";
+
+  async function onAssign(e: React.ChangeEvent<HTMLSelectElement>) {
+    e.stopPropagation();
+    const val = e.target.value;
+    await assignStoryToChapter(story.id, val || undefined);
+    await onRefresh();
+  }
+
+  return (
+    <div className="paper-card paper-card-hover rounded-2xl px-5 py-4 transition">
+      <button
+        type="button"
+        onClick={() => go({ name: "story", storyId: story.id })}
+        className="block w-full text-left"
+      >
+        <div className="flex items-baseline justify-between gap-4">
+          <span className="h-serif text-lg text-ink">{title}</span>
+          {story.storyDate && (
+            <span className="shrink-0 text-xs text-ink-soft uppercase tracking-wide">
+              {story.storyDate}
+            </span>
+          )}
+        </div>
+        {story.summary && (
+          <p className="mt-2 text-sm text-ink/75 leading-relaxed line-clamp-2">{story.summary}</p>
+        )}
+      </button>
+      <div className="mt-3 flex items-center gap-2 text-xs">
+        <span className="text-ink-soft">Capítulo:</span>
+        <select
+          value={story.chapterId ?? ""}
+          onChange={onAssign}
+          onClick={(e) => e.stopPropagation()}
+          className="rounded-md border border-ink/15 bg-white px-2 py-1 text-xs"
+        >
+          <option value="">— sin capítulo —</option>
+          {chapters.map((c) => (
+            <option key={c.id} value={c.id}>{c.title}</option>
+          ))}
+        </select>
+      </div>
+    </div>
   );
 }

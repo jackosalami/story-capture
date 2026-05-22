@@ -44,7 +44,8 @@ export interface Story {
   // Names mentioned in transcripts but not yet promoted to Character entities.
   // Populated by AI metadata extraction; admin can convert these to characters later.
   mentionedPeople?: string[];
-  bookId?: ID; // which MemoirBook this story belongs to (Wave C)
+  bookId?: ID;     // which MemoirBook this story belongs to (Wave C)
+  chapterId?: ID;  // optional chapter assignment within the book (Phase 3)
 }
 
 // --- Memoir-side: AI character detection queue (Wave C, Phase 2) ---
@@ -108,19 +109,19 @@ export interface Character {
   notes: string;
 }
 
+// Organizational chapter inside a MemoirBook. Stories can be grouped into
+// chapters for the printed book's table of contents. AI-generated chapter
+// PROSE (the original PRD §6.7 feature) will come later as content stored
+// here under `prose` once implemented.
 export interface Chapter {
   id: ID;
+  bookId: ID;
   title: string;
-  storyIds: ID[];
-  style: {
-    writingStyle: "verbatim" | "cleaned" | "literary";
-    creativeLicense: number; // 0..1
-    person: "first" | "third";
-    tone: "neutral" | "warm" | "dramatic" | "humorous";
-  };
-  content: string; // Markdown
-  editHistory: { at: string; content: string }[];
+  description: string;
+  order: number;          // 0-based position within the book
+  storyIds: ID[];         // stories assigned to this chapter (also denormalized on Story.chapterId)
   createdAt: string;
+  prose?: string;         // optional AI-generated prose for the chapter (future)
 }
 
 // --- Kids stories workflow (separate space from memoir entities above) ---
