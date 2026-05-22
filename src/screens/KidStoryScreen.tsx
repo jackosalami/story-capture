@@ -53,6 +53,7 @@ export function KidStoryScreen({ kidStoryId }: { kidStoryId: string }) {
   const [translateError, setTranslateError] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [shareService, setShareService] = useState<string | null>(null);
   const [shareError, setShareError] = useState<string | null>(null);
 
   async function refresh() {
@@ -194,17 +195,20 @@ export function KidStoryScreen({ kidStoryId }: { kidStoryId: string }) {
     if (!story) return;
     setShareError(null);
     setShareUrl(null);
+    setShareService(null);
     setSharing(true);
     try {
-      const url = await shareBook({
+      const { url, service } = await shareBook({
         story,
         cast,
         language: viewLanguage ?? story.language,
       });
       setShareUrl(url);
-    } catch {
+      setShareService(service);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
       setShareError(
-        "No se pudo subir el libro automáticamente. Descárgalo y compártelo como archivo HTML.",
+        "No se pudo subir a ningún servicio. Descargué el HTML — compártelo como archivo (WhatsApp, AirDrop, mail). Detalle:\n" + msg,
       );
       try {
         await downloadBookHtml({
@@ -423,8 +427,8 @@ export function KidStoryScreen({ kidStoryId }: { kidStoryId: string }) {
 
           {shareUrl && (
             <div className="mb-6 rounded-2xl bg-sky-soft border-2 border-sky/40 px-5 py-4">
-              <p className="h-display text-sm font-semibold text-night mb-1">
-                ✅ ¡Libro subido! Aquí está tu link:
+              <p className="h-display text-sm font-semibold text-night mb-2">
+                ✅ ¡Libro subido a {shareService ?? "el servidor"}! Tu link público:
               </p>
               <div className="flex flex-wrap items-center gap-2">
                 <a
@@ -438,14 +442,14 @@ export function KidStoryScreen({ kidStoryId }: { kidStoryId: string }) {
                 <button
                   type="button"
                   onClick={() => navigator.clipboard?.writeText(shareUrl)}
-                  className="rounded-full bg-white border border-night/15 px-3 py-1 text-xs h-display font-medium text-night hover:border-grape"
+                  className="btn-3d kid-button rounded-full bg-grape text-white px-3 py-1 text-xs h-display font-semibold"
+                  style={{ borderBottomColor: "#7c5dd6" }}
                 >
-                  Copiar
+                  📋 Copiar link
                 </button>
               </div>
               <p className="mt-2 text-xs text-night/60">
-                Compártelo por WhatsApp / mail / lo que sea. Lo abren en cualquier navegador.
-                (El link en 0x0.st dura ~1 año para archivos pequeños.)
+                Cualquier persona con el link abre el libro en su navegador. Sin cuenta, sin app.
               </p>
             </div>
           )}
@@ -702,24 +706,80 @@ export function KidStoryScreen({ kidStoryId }: { kidStoryId: string }) {
       )}
 
       {!editing && (
-        <div className="mt-10 flex flex-wrap gap-3 justify-center">
-          <button
-            type="button"
-            onClick={() => go({ name: "kids-book", kidStoryId })}
-            className="btn-3d kid-button rounded-2xl bg-gradient-to-br from-sky to-grape text-white px-7 py-3 h-display font-semibold shadow-md"
-            style={{ borderBottomColor: "#3aa19a" }}
-          >
-            📖 Leer en libro
-          </button>
-          <button
-            type="button"
-            onClick={regenerate}
-            className="btn-3d kid-button rounded-2xl bg-gradient-to-br from-grape to-strawberry text-white px-7 py-3 h-display font-semibold shadow-md"
-            style={{ borderBottomColor: "#7c5dd6" }}
-          >
-            ✨ Volver a inventar
-          </button>
-        </div>
+        <>
+          {/* Prominent share card */}
+          <div className="mt-12 rounded-3xl bg-gradient-to-br from-sky-soft via-grape-soft to-strawberry-soft border-2 border-white shadow-md p-6">
+            <div className="flex flex-wrap items-center gap-4 justify-between">
+              <div className="flex-1 min-w-0">
+                <p className="h-display text-xl font-semibold text-night">
+                  📤 Compartir este libro
+                </p>
+                <p className="text-sm text-night/70 mt-1">
+                  Sube el libro a un servidor público y obtén un link para mandar por WhatsApp,
+                  email, o cualquier mensajería. La persona lo abre en su navegador.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={doShareBook}
+                disabled={sharing}
+                className="btn-3d kid-button shrink-0 rounded-2xl bg-gradient-to-br from-sky to-grape text-white px-6 py-3 h-display font-semibold shadow-md disabled:opacity-50"
+                style={{ borderBottomColor: "#3aa19a" }}
+              >
+                {sharing ? "Subiendo…" : "📤 Obtener link"}
+              </button>
+            </div>
+            {shareUrl && (
+              <div className="mt-4 rounded-2xl bg-white border-2 border-sky/30 px-4 py-3">
+                <p className="h-display text-xs font-semibold text-night mb-2">
+                  ✅ ¡Listo! Subido a {shareService ?? "el servidor"}:
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <a
+                    href={shareUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-mono text-sm text-grape break-all underline-offset-2 hover:underline"
+                  >
+                    {shareUrl}
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => navigator.clipboard?.writeText(shareUrl)}
+                    className="btn-3d kid-button rounded-full bg-grape text-white px-3 py-1 text-xs h-display font-semibold"
+                    style={{ borderBottomColor: "#7c5dd6" }}
+                  >
+                    📋 Copiar
+                  </button>
+                </div>
+              </div>
+            )}
+            {shareError && (
+              <div className="mt-4 rounded-2xl bg-strawberry-soft border-2 border-strawberry/30 px-4 py-3 text-xs text-strawberry whitespace-pre-wrap">
+                {shareError}
+              </div>
+            )}
+          </div>
+
+          <div className="mt-8 flex flex-wrap gap-3 justify-center">
+            <button
+              type="button"
+              onClick={() => go({ name: "kids-book", kidStoryId })}
+              className="btn-3d kid-button rounded-2xl bg-gradient-to-br from-sky to-grape text-white px-7 py-3 h-display font-semibold shadow-md"
+              style={{ borderBottomColor: "#3aa19a" }}
+            >
+              📖 Leer en libro
+            </button>
+            <button
+              type="button"
+              onClick={regenerate}
+              className="btn-3d kid-button rounded-2xl bg-gradient-to-br from-grape to-strawberry text-white px-7 py-3 h-display font-semibold shadow-md"
+              style={{ borderBottomColor: "#7c5dd6" }}
+            >
+              ✨ Volver a inventar
+            </button>
+          </div>
+        </>
       )}
     </div>
   );

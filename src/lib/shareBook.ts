@@ -194,29 +194,91 @@ export async function buildShareableHtml(args: {
 </html>`;
 }
 
-// Upload the HTML to 0x0.st (anonymous, CORS-friendly, ~512MB limit).
-// Returns the public URL on success.
-async function uploadToZeroXZero(htmlBlob: Blob, filename: string): Promise<string> {
+// We try several anonymous file hosts in order. Each is free, no auth, and
+// (in principle) supports CORS POST from a browser. If one fails we move to
+// the next. Different services have different reliability windows / regional
+// availability, so the chain is more robust than any single endpoint.
+
+async function uploadToCatbox(blob: Blob, filename: string): Promise<string> {
+  // Permanent (no expiry), 200 MB limit, well-known browser-CORS support.
   const form = new FormData();
-  form.append("file", htmlBlob, filename);
+  form.append("reqtype", "fileupload");
+  form.append("fileToUpload", blob, filename);
+  const res = await fetch("https://catbox.moe/user/api.php", {
+    method: "POST",
+    body: form,
+  });
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error(`catbox failed (${res.status}): ${t}`);
+  }
+  const url = (await res.text()).trim();
+  if (!url.startsWith("http")) throw new Error(`catbox bad response: ${url}`);
+  return url;
+}
+
+async function uploadToLitterbox(blob: Blob, filename: string): Promise<string> {
+  // Temporary (24h–72h depending on flag). Same operator as catbox; different
+  // backend with different anti-abuse rules.
+  const form = new FormData();
+  form.append("reqtype", "fileupload");
+  form.append("time", "72h");
+  form.append("fileToUpload", blob, filename);
+  const res = await fetch("https://litterbox.catbox.moe/resources/internals/api.php", {
+    method: "POST",
+    body: form,
+  });
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error(`litterbox failed (${res.status}): ${t}`);
+  }
+  const url = (await res.text()).trim();
+  if (!url.startsWith("http")) throw new Error(`litterbox bad response: ${url}`);
+  return url;
+}
+
+async function uploadToZeroXZero(blob: Blob, filename: string): Promise<string> {
+  // ~1-year retention for small files, ~512 MB cap.
+  const form = new FormData();
+  form.append("file", blob, filename);
   const res = await fetch("https://0x0.st", {
     method: "POST",
     body: form,
   });
   if (!res.ok) {
     const t = await res.text().catch(() => "");
-    throw new Error(`0x0.st upload failed (${res.status}): ${t}`);
+    throw new Error(`0x0.st failed (${res.status}): ${t}`);
   }
-  return (await res.text()).trim();
+  const url = (await res.text()).trim();
+  if (!url.startsWith("http")) throw new Error(`0x0.st bad response: ${url}`);
+  return url;
 }
 
-// Returns the public URL of the uploaded book.
-// If upload fails (CORS, network, etc.), throws — the caller can offer a download.
+// Try services in this order until one returns a URL.
+async function uploadAnywhere(blob: Blob, filename: string): Promise<{ url: string; service: string }> {
+  const attempts: { name: string; fn: () => Promise<string> }[] = [
+    { name: "catbox.moe", fn: () => uploadToCatbox(blob, filename) },
+    { name: "0x0.st", fn: () => uploadToZeroXZero(blob, filename) },
+    { name: "litterbox.catbox.moe", fn: () => uploadToLitterbox(blob, filename) },
+  ];
+  const failures: string[] = [];
+  for (const a of attempts) {
+    try {
+      const url = await a.fn();
+      return { url, service: a.name };
+    } catch (e) {
+      failures.push(`${a.name}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+  throw new Error("All upload services failed:\n" + failures.join("\n"));
+}
+
+// Returns the public URL of the uploaded book and the service that hosted it.
 export async function shareBook(args: {
   story: KidStory;
   cast: KidCharacter[];
   language: StoryLanguage;
-}): Promise<string> {
+}): Promise<{ url: string; service: string }> {
   const html = await buildShareableHtml(args);
   const blob = new Blob([html], { type: "text/html; charset=utf-8" });
   const slug = (args.story.title || "cuento")
@@ -224,7 +286,7 @@ export async function shareBook(args: {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "")
     .slice(0, 40) || "cuento";
-  return uploadToZeroXZero(blob, `${slug}.html`);
+  return uploadAnywhere(blob, `${slug}.html`);
 }
 
 // Fallback: trigger a local download of the HTML.

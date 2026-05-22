@@ -94,7 +94,7 @@ export function BookReaderScreen({ kidStoryId }: { kidStoryId: string }) {
   const spread = spreads[current];
 
   return (
-    <div className="min-h-svh flex flex-col bg-gradient-to-b from-grape-soft/30 via-cloud to-sun-soft/20">
+    <div className="h-svh flex flex-col bg-gradient-to-b from-grape-soft/30 via-cloud to-sun-soft/20 overflow-hidden">
       <header className="flex items-center justify-between gap-3 px-5 py-4">
         <button
           type="button"
@@ -130,12 +130,12 @@ export function BookReaderScreen({ kidStoryId }: { kidStoryId: string }) {
       </header>
 
       <div
-        className="flex-1 flex items-center justify-center px-4 sm:px-8 pb-6"
+        className="flex-1 flex items-center justify-center px-2 sm:px-6 pb-4 min-h-0"
         style={{ perspective: "2400px" }}
       >
         <div
           key={current}
-          className="book-spread w-full max-w-5xl"
+          className="book-spread w-full h-full max-w-[1800px] flex items-center justify-center"
           data-direction={direction}
         >
           {spread.kind === "cover" && <CoverPage story={story} cast={cast} onOpen={next} />}
@@ -266,7 +266,7 @@ function CoverPage({
     <button
       type="button"
       onClick={onOpen}
-      className="block mx-auto w-full max-w-md aspect-[3/4] rounded-2xl overflow-hidden shadow-2xl relative bg-gradient-to-br from-grape via-strawberry to-tangerine text-white text-left transition hover:scale-[1.01]"
+      className="block mx-auto h-full max-h-full aspect-[3/4] rounded-2xl overflow-hidden shadow-2xl relative bg-gradient-to-br from-grape via-strawberry to-tangerine text-white text-left transition hover:scale-[1.01]"
     >
       {url && (
         <img
@@ -315,7 +315,7 @@ function BackPage({
   onClose: () => void;
 }) {
   return (
-    <div className="mx-auto w-full max-w-md aspect-[3/4] rounded-2xl bg-gradient-to-br from-night via-grape to-strawberry text-white shadow-2xl p-8 flex flex-col items-center justify-center text-center">
+    <div className="mx-auto h-full max-h-full aspect-[3/4] rounded-2xl bg-gradient-to-br from-night via-grape to-strawberry text-white shadow-2xl p-8 flex flex-col items-center justify-center text-center">
       <p className="h-display text-5xl mb-4">Fin</p>
       <p className="opacity-85">{story.title || "Cuento"}</p>
       {cast.length > 0 && (
@@ -358,23 +358,28 @@ function SpreadPages({
 }) {
   const url = useObjectUrl(imageBlob);
   return (
-    <div className="grid md:grid-cols-2 gap-4 md:gap-2 max-w-5xl mx-auto relative">
+    // Spread fills the available viewport height. On desktop: two pages side
+    // by side, each ~50% width, each filling full height. On mobile: stacked,
+    // each pane gets ~half the screen.
+    <div className="relative w-full h-full flex flex-col md:flex-row gap-2 md:gap-1">
+      {/* Subtle book-spine shadow in the middle (desktop only) */}
       <div
         aria-hidden
-        className="hidden md:block absolute inset-y-0 left-1/2 -translate-x-1/2 w-8 pointer-events-none z-10"
+        className="hidden md:block absolute inset-y-0 left-1/2 -translate-x-1/2 w-10 pointer-events-none z-10"
         style={{
           background:
             "linear-gradient(to right, transparent, rgba(31,22,18,0.18) 30%, rgba(31,22,18,0.32) 50%, rgba(31,22,18,0.18) 70%, transparent)",
         }}
       />
 
-      <div className="rounded-l-2xl md:rounded-r-none rounded-2xl bg-cloud shadow-xl overflow-hidden aspect-[3/4] flex items-center justify-center p-2">
+      {/* Left page — image, fills its half */}
+      <div className="flex-1 min-h-0 rounded-l-2xl md:rounded-r-none rounded-2xl bg-cloud shadow-xl overflow-hidden flex items-center justify-center p-2 sm:p-3">
         {url ? (
           <img
             src={url}
             alt=""
-            className="max-w-full max-h-full object-contain"
-            style={{ width: "100%", height: "100%", objectFit: "contain" }}
+            className="block max-w-full max-h-full"
+            style={{ objectFit: "contain", width: "auto", height: "auto" }}
           />
         ) : (
           <div className="text-center px-8">
@@ -386,24 +391,25 @@ function SpreadPages({
         )}
       </div>
 
+      {/* Right page — text, fills its half, scrolls if needed */}
       <div
-        className="rounded-r-2xl md:rounded-l-none rounded-2xl bg-cloud shadow-xl px-7 py-9 sm:px-10 sm:py-12 aspect-[3/4] overflow-y-auto"
+        className="flex-1 min-h-0 rounded-r-2xl md:rounded-l-none rounded-2xl bg-cloud shadow-xl overflow-y-auto px-6 sm:px-12 md:px-14 py-8 sm:py-12 flex flex-col"
         style={PAGE_BG_STYLE}
       >
         {momentTitle && (
-          <p className="text-grape h-display text-[10px] uppercase tracking-widest font-semibold mb-3">
+          <p className="text-grape h-display text-xs uppercase tracking-widest font-semibold mb-4">
             {momentTitle}
           </p>
         )}
         <div
-          className="text-night/90 leading-[1.85] text-base sm:text-lg whitespace-pre-wrap"
-          style={{ fontFamily: "var(--font-serif)" }}
+          className="flex-1 text-night/90 leading-[1.85] text-base sm:text-lg md:text-xl whitespace-pre-wrap"
+          style={{ fontFamily: "var(--font-serif)", maxWidth: "62ch" }}
         >
           {text || (
             <span className="text-night/40 italic">(Sin texto en esta sección.)</span>
           )}
         </div>
-        <p className="mt-8 text-xs text-night/40 text-center h-display">
+        <p className="mt-6 text-xs text-night/40 text-center h-display">
           {sceneIndex + 1} / {totalScenes}
         </p>
       </div>
