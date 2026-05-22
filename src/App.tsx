@@ -10,6 +10,11 @@ import { CharactersScreen } from "./screens/CharactersScreen";
 import { CharacterScreen } from "./screens/CharacterScreen";
 import { WalkthroughScreen } from "./screens/WalkthroughScreen";
 import { TopicLibraryScreen } from "./screens/TopicLibraryScreen";
+import { KidsDashboardScreen } from "./screens/KidsDashboardScreen";
+import { NewKidStoryScreen } from "./screens/NewKidStoryScreen";
+import { KidStoryScreen } from "./screens/KidStoryScreen";
+import { KidCharactersScreen } from "./screens/KidCharactersScreen";
+import { KidCharacterScreen } from "./screens/KidCharacterScreen";
 
 function App() {
   const screen = useNav((s) => s.screen);
@@ -17,11 +22,15 @@ function App() {
   const hasKey = useSettings((s) => s.openaiApiKey.length > 0);
   const hasSeenWalkthrough = useSettings((s) => s.hasSeenWalkthrough);
 
-  // Gates: no key → settings. Has key but never saw walkthrough → walkthrough.
   useEffect(() => {
     if (!hasKey && screen.name !== "settings") {
       go({ name: "settings" });
-    } else if (hasKey && !hasSeenWalkthrough && screen.name !== "walkthrough" && screen.name !== "settings") {
+    } else if (
+      hasKey &&
+      !hasSeenWalkthrough &&
+      screen.name !== "walkthrough" &&
+      screen.name !== "settings"
+    ) {
       go({ name: "walkthrough" });
     }
   }, [hasKey, hasSeenWalkthrough, screen.name, go]);
@@ -44,6 +53,16 @@ function App() {
       return <CharactersScreen />;
     case "character":
       return <CharacterScreen characterId={screen.characterId} />;
+    case "kids-dashboard":
+      return <KidsDashboardScreen />;
+    case "kids-new":
+      return <NewKidStoryScreen />;
+    case "kids-story":
+      return <KidStoryScreen kidStoryId={screen.kidStoryId} />;
+    case "kids-characters":
+      return <KidCharactersScreen />;
+    case "kids-character":
+      return <KidCharacterScreen kidCharacterId={screen.kidCharacterId} />;
     default:
       return <DashboardScreen />;
   }

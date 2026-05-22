@@ -18,9 +18,12 @@ import {
   FOLLOW_UP_SYSTEM_PROMPT,
   SESSION_SUMMARY_SYSTEM_PROMPT,
   TITLE_SYSTEM_PROMPT,
+  METADATA_SYSTEM_PROMPT,
   buildFollowUpUserPrompt,
   buildSummaryUserPrompt,
   buildTitleUserPrompt,
+  buildMetadataUserPrompt,
+  parseMetadataResponse,
 } from "../prompts/spanish";
 import { formatLongDate } from "../lib/format";
 
@@ -173,6 +176,39 @@ export function RecordScreen({ sessionId }: { sessionId: string }) {
       if (story && !story.summary && summary) {
         await updateStory(story.id, { summary });
       }
+
+      // Extract structured metadata from the transcript, but only fill empty fields
+      // so we never overwrite anything the user typed by hand.
+      if (story && accumulated.trim().length > 80) {
+        try {
+          const raw = await chat({
+            model: chatModel,
+            messages: [
+              { role: "system", content: METADATA_SYSTEM_PROMPT },
+              { role: "user", content: buildMetadataUserPrompt(accumulated) },
+            ],
+            temperature: 0.2,
+            maxTokens: 400,
+          });
+          const meta = parseMetadataResponse(raw);
+          if (meta) {
+            const patch: Record<string, unknown> = {};
+            if (!story.storyDate && meta.storyDate) patch.storyDate = meta.storyDate;
+            if (!story.location && meta.location) patch.location = meta.location;
+            if (!story.environment && meta.environment.length > 0) {
+              patch.environment = meta.environment.join(", ");
+            }
+            if (story.mood.length === 0 && meta.mood.length > 0) patch.mood = meta.mood;
+            if (meta.mentionedPeople.length > 0) patch.mentionedPeople = meta.mentionedPeople;
+            if (Object.keys(patch).length > 0) {
+              await updateStory(story.id, patch);
+            }
+          }
+        } catch {
+          // Metadata extraction is non-essential — swallow errors.
+        }
+      }
+
       setPhase("done");
       setTimeout(() => {
         if (story) go({ name: "story", storyId: story.id });

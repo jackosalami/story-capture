@@ -5,6 +5,8 @@ import type {
   Story,
   Character,
   Chapter,
+  KidCharacter,
+  KidStory,
 } from "./types";
 
 class StoryCaptureDB extends Dexie {
@@ -13,6 +15,8 @@ class StoryCaptureDB extends Dexie {
   stories!: EntityTable<Story, "id">;
   characters!: EntityTable<Character, "id">;
   chapters!: EntityTable<Chapter, "id">;
+  kidCharacters!: EntityTable<KidCharacter, "id">;
+  kidStories!: EntityTable<KidStory, "id">;
 
   constructor() {
     super("story-capture");
@@ -23,13 +27,22 @@ class StoryCaptureDB extends Dexie {
       characters: "id, name",
       chapters: "id, createdAt",
     });
+    // v2: add kid-stories workspace (separate from memoir entities above)
+    this.version(2).stores({
+      sessions: "id, date, status, storyId",
+      segments: "id, sessionId, order, timestamp",
+      stories: "id, createdAt, storyDate",
+      characters: "id, name",
+      chapters: "id, createdAt",
+      kidCharacters: "id, name, createdAt",
+      kidStories: "id, createdAt",
+    });
   }
 }
 
 export const db = new StoryCaptureDB();
 
 export function newId(): string {
-  // crypto.randomUUID is available in all modern browsers; falls back if not.
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
   }

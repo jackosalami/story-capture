@@ -1,58 +1,76 @@
 import { useEffect, useState } from "react";
 import { useNav } from "../store/nav";
-import { getStory, updateStory, linkCharacterToStory } from "../db/stories";
+import {
+  getStory,
+  updateStory,
+  linkCharacterToStory,
+  unlinkCharacterFromStory,
+} from "../db/stories";
+import { db } from "../db/db";
 import { CharacterPicker } from "../components/CharacterPicker";
 import { ChipPicker } from "../components/ChipPicker";
 import { ENVIRONMENT_CHIPS, MOOD_CHIPS } from "../lib/constants";
-import { db } from "../db/db";
 
 interface Props {
   storyId: string;
   sessionId: string;
 }
 
+// The prep screen is a moment of pause — it shows the kinds of questions the
+// storyteller might want to think about, but never asks her to fill anything in.
+// Metadata is extracted from the transcript after she finishes talking.
+// "Añadir detalles" reveals an optional form for users who do want to set
+// metadata up front.
+
 export function StorySetupScreen({ storyId, sessionId }: Props) {
   const go = useNav((s) => s.go);
+  const [topicPrompt, setTopicPrompt] = useState<string | null>(null);
+  const [showRecall, setShowRecall] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+
+  // Optional advanced form state — only used when "Añadir detalles" is opened.
   const [storyDate, setStoryDate] = useState("");
   const [location, setLocation] = useState("");
   const [environment, setEnvironment] = useState<string[]>([]);
-  const [characterIds, setCharacterIds] = useState<string[]>([]);
   const [mood, setMood] = useState<string[]>([]);
-  const [topicPrompt, setTopicPrompt] = useState<string | null>(null);
-  const [showRecall, setShowRecall] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [characterIds, setCharacterIds] = useState<string[]>([]);
+  const [originalCharacterIds, setOriginalCharacterIds] = useState<string[]>([]);
 
   useEffect(() => {
     (async () => {
       const s = await getStory(storyId);
-      if (!s) return;
-      setStoryDate(s.storyDate);
-      setLocation(s.location);
-      setEnvironment(s.environment ? s.environment.split(", ").filter(Boolean) : []);
-      setCharacterIds(s.characterIds);
-      setMood(s.mood);
+      if (s) {
+        setStoryDate(s.storyDate);
+        setLocation(s.location);
+        setEnvironment(s.environment ? s.environment.split(", ").filter(Boolean) : []);
+        setMood(s.mood);
+        setCharacterIds(s.characterIds);
+        setOriginalCharacterIds(s.characterIds);
+      }
       const sess = await db.sessions.get(sessionId);
       if (sess?.topicPrompt) setTopicPrompt(sess.topicPrompt);
     })();
   }, [storyId, sessionId]);
 
-  async function startRecording() {
-    setSaving(true);
-    await updateStory(storyId, {
-      storyDate: storyDate.trim(),
-      location: location.trim(),
-      environment: environment.join(", "),
-      mood,
-    });
-    // Link characters bidirectionally
-    for (const cid of characterIds) {
-      await linkCharacterToStory(storyId, cid);
+  async function start() {
+    // If details panel is open, persist what was typed; otherwise just go.
+    if (showDetails) {
+      await updateStory(storyId, {
+        storyDate: storyDate.trim(),
+        location: location.trim(),
+        environment: environment.join(", "),
+        mood,
+      });
+      const prev = new Set(originalCharacterIds);
+      const next = new Set(characterIds);
+      for (const cid of characterIds) if (!prev.has(cid)) await linkCharacterToStory(storyId, cid);
+      for (const cid of originalCharacterIds) if (!next.has(cid)) await unlinkCharacterFromStory(storyId, cid);
     }
     go({ name: "record", sessionId });
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-6 py-10">
+    <div className="mx-auto max-w-xl px-6 py-10">
       <header className="flex items-baseline justify-between mb-8">
         <button
           type="button"
@@ -61,17 +79,14 @@ export function StorySetupScreen({ storyId, sessionId }: Props) {
         >
           ← Volver
         </button>
-        <span className="text-sm text-ink/50">Antes de grabar</span>
       </header>
 
-      <h1 className="text-3xl font-medium text-ink mb-2">Cuéntame de esta historia</h1>
-      <p className="text-base text-ink/60 mb-6">
-        Estos detalles me ayudan a organizar tus historias. Puedes saltar cualquier
-        pregunta y volver a editar después.
-      </p>
+      <h1 className="text-3xl font-medium text-ink mb-6 leading-tight">
+        Antes de empezar, piensa un momento…
+      </h1>
 
       {topicPrompt && (
-        <div className="mb-6 rounded-xl bg-warm-soft border border-warm/30 px-5 py-4">
+        <div className="mb-8 rounded-xl bg-warm-soft border border-warm/30 px-5 py-4">
           <p className="text-xs uppercase tracking-wide text-warm font-medium mb-1">
             Tema de hoy
           </p>
@@ -79,7 +94,21 @@ export function StorySetupScreen({ storyId, sessionId }: Props) {
         </div>
       )}
 
-      <div className="mb-8 rounded-xl border border-ink/10 bg-white">
+      <ul className="space-y-3 mb-8">
+        <Prompt>¿Cuándo pasó esto?</Prompt>
+        <Prompt>¿Dónde fue?</Prompt>
+        <Prompt>¿Cómo era el ambiente — el clima, la luz, los olores?</Prompt>
+        <Prompt>¿Quiénes estaban contigo?</Prompt>
+        <Prompt>¿Cómo te hacía sentir?</Prompt>
+      </ul>
+
+      <p className="text-sm text-ink/60 mb-8 leading-relaxed">
+        No tienes que contestar nada antes. Cuando empieces a grabar, deja que
+        salga como salga. Yo iré escuchando y, si quieres, te haré preguntas
+        para que recuerdes más detalles.
+      </p>
+
+      <div className="mb-10 rounded-xl border border-ink/10 bg-white">
         <button
           type="button"
           onClick={() => setShowRecall((v) => !v)}
@@ -104,94 +133,81 @@ export function StorySetupScreen({ storyId, sessionId }: Props) {
               <li>Las texturas — ¿el suelo, las paredes, la tela de tu vestido?</li>
               <li>Lo que sentías por dentro — ¿alegría, miedo, vergüenza, paz?</li>
             </ul>
-            <p className="pt-2 text-ink/65">
-              No tienes que contestar todo esto. Solo deja que los detalles vuelvan,
-              y cuando empieces a grabar, deja que salga como salga.
-            </p>
           </div>
         )}
       </div>
 
-      <div className="space-y-8">
-        <Field label="¿Cuándo pasó esto?" hint="Ejemplos: «primavera de 1972», «cuando tenía 8 años»">
-          <input
-            type="text"
-            value={storyDate}
-            onChange={(e) => setStoryDate(e.target.value)}
-            placeholder="Cuando tenía…"
-            className="w-full rounded-lg border border-ink/15 bg-white px-4 py-3 text-base focus:outline-none focus:border-warm focus:ring-2 focus:ring-warm/20"
-          />
-        </Field>
-
-        <Field label="¿Dónde pasó?" hint="Ejemplo: «la casa de mi abuela en Salamanca»">
-          <input
-            type="text"
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            placeholder="En…"
-            className="w-full rounded-lg border border-ink/15 bg-white px-4 py-3 text-base focus:outline-none focus:border-warm focus:ring-2 focus:ring-warm/20"
-          />
-        </Field>
-
-        <Field label="¿Cómo era el ambiente?" hint="Toca las palabras que encajen, o escribe la tuya.">
-          <ChipPicker
-            options={ENVIRONMENT_CHIPS}
-            selected={environment}
-            onChange={setEnvironment}
-            customPlaceholder="Otra palabra…"
-          />
-        </Field>
-
-        <Field label="¿Quiénes estaban ahí?" hint="Añade las personas que aparecen en esta historia.">
-          <CharacterPicker selectedIds={characterIds} onChange={setCharacterIds} />
-        </Field>
-
-        <Field label="¿De qué se trata?" hint="Una o más palabras que capturen el tema o sentimiento.">
-          <ChipPicker
-            options={MOOD_CHIPS}
-            selected={mood}
-            onChange={setMood}
-            customPlaceholder="Otro tema…"
-          />
-        </Field>
-      </div>
-
-      <div className="mt-10 flex items-center justify-between">
+      <div className="flex justify-center">
         <button
           type="button"
-          onClick={() => go({ name: "record", sessionId })}
-          className="text-sm text-ink/60 hover:text-ink underline-offset-2 hover:underline"
+          onClick={start}
+          className="rounded-2xl bg-record px-10 py-5 text-xl font-medium text-white shadow-md hover:bg-record/90 active:scale-[0.99] transition"
         >
-          Saltar todo
-        </button>
-        <button
-          type="button"
-          onClick={startRecording}
-          disabled={saving}
-          className="rounded-lg bg-warm px-6 py-3 text-base font-medium text-white shadow-sm hover:bg-warm/90 disabled:opacity-50"
-        >
-          {saving ? "Guardando…" : "Empezar a grabar"}
+          Empezar a grabar
         </button>
       </div>
+
+      {/* Power-user escape hatch: typed metadata up front. Hidden by default. */}
+      <div className="mt-10 text-center">
+        {!showDetails ? (
+          <button
+            type="button"
+            onClick={() => setShowDetails(true)}
+            className="text-xs text-ink/45 hover:text-ink underline-offset-2 hover:underline"
+          >
+            Añadir detalles antes de empezar
+          </button>
+        ) : (
+          <p className="text-xs text-ink/45">
+            Estos campos son opcionales — también puedes editarlos después.
+          </p>
+        )}
+      </div>
+
+      {showDetails && (
+        <div className="mt-6 space-y-5 border-t border-ink/10 pt-6">
+          <label className="block">
+            <span className="text-sm font-medium text-ink/80">¿Cuándo pasó?</span>
+            <input
+              type="text"
+              value={storyDate}
+              onChange={(e) => setStoryDate(e.target.value)}
+              placeholder="Cuando tenía…"
+              className="mt-1 w-full rounded-lg border border-ink/15 bg-white px-3 py-2 text-base focus:outline-none focus:border-warm focus:ring-2 focus:ring-warm/20"
+            />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-ink/80">¿Dónde?</span>
+            <input
+              type="text"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-ink/15 bg-white px-3 py-2 text-base focus:outline-none focus:border-warm focus:ring-2 focus:ring-warm/20"
+            />
+          </label>
+          <div>
+            <span className="text-sm font-medium text-ink/80 block mb-2">Ambiente</span>
+            <ChipPicker options={ENVIRONMENT_CHIPS} selected={environment} onChange={setEnvironment} />
+          </div>
+          <div>
+            <span className="text-sm font-medium text-ink/80 block mb-2">Tema</span>
+            <ChipPicker options={MOOD_CHIPS} selected={mood} onChange={setMood} />
+          </div>
+          <div>
+            <span className="text-sm font-medium text-ink/80 block mb-2">Personas</span>
+            <CharacterPicker selectedIds={characterIds} onChange={setCharacterIds} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function Field({
-  label,
-  hint,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
+function Prompt({ children }: { children: React.ReactNode }) {
   return (
-    <div>
-      <h2 className="text-lg font-medium text-ink">{label}</h2>
-      {hint && <p className="text-sm text-ink/55 mb-3">{hint}</p>}
-      {!hint && <div className="mb-3" />}
-      {children}
-    </div>
+    <li className="flex items-start gap-3 text-lg text-ink/85 leading-relaxed">
+      <span className="text-warm select-none mt-1">·</span>
+      <span>{children}</span>
+    </li>
   );
 }

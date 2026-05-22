@@ -5,6 +5,7 @@ import { createStory, linkSessionToStory, listStories } from "../db/stories";
 import type { Session, Story } from "../db/types";
 import { formatLongDate } from "../lib/format";
 import { groupByDecade, groupByTheme } from "../lib/groupStories";
+import { ModeToggle } from "../components/ModeToggle";
 
 type View = "chrono" | "theme" | "session";
 
@@ -32,31 +33,34 @@ export function DashboardScreen() {
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-10">
-      <header className="flex items-baseline justify-between mb-10">
-        <h1 className="text-4xl font-medium text-ink">Tus historias</h1>
-        <nav className="flex items-center gap-4 text-sm">
-          <button
-            type="button"
-            onClick={() => go({ name: "walkthrough" })}
-            className="text-ink/70 hover:text-ink"
-          >
-            ¿Cómo funciona?
-          </button>
-          <button
-            type="button"
-            onClick={() => go({ name: "characters" })}
-            className="text-ink/70 hover:text-ink"
-          >
-            Personajes
-          </button>
-          <button
-            type="button"
-            onClick={() => go({ name: "settings" })}
-            className="text-ink/60 hover:text-ink"
-          >
-            Ajustes
-          </button>
-        </nav>
+      <header className="flex flex-col gap-4 mb-10">
+        <ModeToggle active="memoir" />
+        <div className="flex items-baseline justify-between">
+          <h1 className="text-4xl font-medium text-ink">Tus historias</h1>
+          <nav className="flex items-center gap-4 text-sm">
+            <button
+              type="button"
+              onClick={() => go({ name: "walkthrough" })}
+              className="text-ink/70 hover:text-ink"
+            >
+              ¿Cómo funciona?
+            </button>
+            <button
+              type="button"
+              onClick={() => go({ name: "characters" })}
+              className="text-ink/70 hover:text-ink"
+            >
+              Personajes
+            </button>
+            <button
+              type="button"
+              onClick={() => go({ name: "settings" })}
+              className="text-ink/60 hover:text-ink"
+            >
+              Ajustes
+            </button>
+          </nav>
+        </div>
       </header>
 
       <div className="space-y-3">

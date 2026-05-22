@@ -57,3 +57,59 @@ export function buildTitleUserPrompt(firstSegment: string): string {
 ${firstSegment}
 ---`;
 }
+
+export const METADATA_SYSTEM_PROMPT = `Eres una asistente que lee transcripciones de narración oral en español y extrae datos estructurados sobre la historia.
+
+Devuelve EXCLUSIVAMENTE un objeto JSON válido (sin markdown, sin explicaciones, sin envoltorios) con esta forma:
+
+{
+  "storyDate": "string — aproximación libre como 'primavera de 1972', 'cuando tenía 8 años', o '' si no se menciona",
+  "location": "string — lugar donde pasó la historia, o '' si no se menciona",
+  "environment": ["array de palabras del ambiente: frío, caluroso, de noche, lluvioso, oscuro, tranquilo, etc. Vacío si no hay pistas"],
+  "mood": ["array de temas o emociones: alegría, tristeza, amor, aventura, familia, infancia, pérdida, orgullo, miedo, esperanza, trabajo, fe, tradición, inmigración"],
+  "mentionedPeople": ["array de nombres propios de personas mencionadas, ej: 'Tía María', 'abuela Rosa'. No incluyas a la narradora misma."]
+}
+
+Reglas:
+- Sé conservadora. Si la transcripción no menciona un dato, deja el campo vacío ('' o []).
+- No inventes nombres ni lugares.
+- Para mood, escoge solo de la lista dada arriba.
+- Los nombres propios deben aparecer literalmente en la transcripción.
+- Tu respuesta debe ser solo el JSON, parseable sin modificaciones.`;
+
+export function buildMetadataUserPrompt(transcript: string): string {
+  return `Extrae los metadatos de esta sesión:
+
+---
+${transcript}
+---`;
+}
+
+export interface ExtractedMetadata {
+  storyDate: string;
+  location: string;
+  environment: string[];
+  mood: string[];
+  mentionedPeople: string[];
+}
+
+export function parseMetadataResponse(raw: string): ExtractedMetadata | null {
+  // The model sometimes wraps JSON in markdown fences despite instructions; strip them.
+  const cleaned = raw
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/```\s*$/i, "")
+    .trim();
+  try {
+    const parsed = JSON.parse(cleaned);
+    return {
+      storyDate: typeof parsed.storyDate === "string" ? parsed.storyDate : "",
+      location: typeof parsed.location === "string" ? parsed.location : "",
+      environment: Array.isArray(parsed.environment) ? parsed.environment.filter((x: unknown) => typeof x === "string") : [],
+      mood: Array.isArray(parsed.mood) ? parsed.mood.filter((x: unknown) => typeof x === "string") : [],
+      mentionedPeople: Array.isArray(parsed.mentionedPeople) ? parsed.mentionedPeople.filter((x: unknown) => typeof x === "string") : [],
+    };
+  } catch {
+    return null;
+  }
+}

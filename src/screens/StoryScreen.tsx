@@ -8,7 +8,7 @@ import {
   linkSessionToStory,
 } from "../db/stories";
 import { createSession, listSegments } from "../db/sessions";
-import { getCharactersByIds } from "../db/characters";
+import { createCharacter, getCharactersByIds } from "../db/characters";
 import { db } from "../db/db";
 import type { Story, Character, Segment, Session } from "../db/types";
 import { formatLongDate } from "../lib/format";
@@ -232,6 +232,47 @@ export function StoryScreen({ storyId }: { storyId: string }) {
             <p className="mt-6 text-base text-ink leading-relaxed">{story.summary}</p>
           )}
         </>
+      )}
+
+      {!editing && story.mentionedPeople && story.mentionedPeople.length > 0 && (
+        <section className="mt-8 rounded-xl border border-ink/10 bg-white px-5 py-4">
+          <p className="text-xs uppercase tracking-wide text-ink/50 mb-2">
+            Personas mencionadas
+          </p>
+          <p className="text-sm text-ink/65 mb-3">
+            Detecté estos nombres en la grabación. Si alguna persona es importante para el libro,
+            puedes guardarla como personaje:
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {story.mentionedPeople.map((name) => {
+              const alreadyPromoted = characters.some(
+                (c) => c.name.toLowerCase() === name.toLowerCase() ||
+                       c.aliases.map((a) => a.toLowerCase()).includes(name.toLowerCase()),
+              );
+              if (alreadyPromoted) {
+                return (
+                  <span key={name} className="rounded-full bg-ink/5 text-ink/60 text-sm px-3 py-1">
+                    {name} ✓
+                  </span>
+                );
+              }
+              return (
+                <button
+                  key={name}
+                  type="button"
+                  onClick={async () => {
+                    const character = await createCharacter({ name });
+                    await linkCharacterToStory(storyId, character.id);
+                    await refresh();
+                  }}
+                  className="rounded-full border border-warm/40 bg-warm-soft text-warm text-sm px-3 py-1 hover:bg-warm/15"
+                >
+                  + {name}
+                </button>
+              );
+            })}
+          </div>
+        </section>
       )}
 
       <section className="mt-10">

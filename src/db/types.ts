@@ -40,6 +40,9 @@ export interface Story {
   characterIds: ID[];
   sessionIds: ID[];
   createdAt: string;
+  // Names mentioned in transcripts but not yet promoted to Character entities.
+  // Populated by AI metadata extraction; admin can convert these to characters later.
+  mentionedPeople?: string[];
 }
 
 export interface Character {
@@ -64,6 +67,35 @@ export interface Chapter {
     tone: "neutral" | "warm" | "dramatic" | "humorous";
   };
   content: string; // Markdown
+  editHistory: { at: string; content: string }[];
+  createdAt: string;
+}
+
+// --- Kids stories workflow (separate space from memoir entities above) ---
+
+export type KidCharacterKind = "niño" | "animal" | "criatura" | "objeto mágico" | "otro";
+
+export interface KidCharacter {
+  id: ID;
+  name: string;
+  kind: KidCharacterKind;
+  description: string; // physical + personality, free text
+  traits: string[]; // valiente, curioso, tímido, etc.
+  createdAt: string;
+}
+
+export type AgeBand = "3-5" | "6-8" | "9-12";
+
+export interface KidStory {
+  id: ID;
+  title: string;
+  protagonistIds: ID[]; // KidCharacter ids
+  setting: string; // "un bosque mágico al amanecer"
+  theme: string; // "valentía", "compartir", free text
+  ageBand: AgeBand;
+  forChild: string; // optional dedication name
+  targetWords: number;
+  content: string; // generated Spanish prose
   editHistory: { at: string; content: string }[];
   createdAt: string;
 }
