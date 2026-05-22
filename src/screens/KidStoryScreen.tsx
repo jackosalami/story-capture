@@ -16,6 +16,7 @@ import {
 } from "../prompts/kidStory";
 import { generateImagePrompts } from "../lib/generateImagePrompts";
 import { Sparkle, StarMascot, avatarForKind } from "../components/Mascots";
+import { useObjectUrl } from "../lib/useObjectUrl";
 
 const COOKING_MESSAGES = [
   "Reescribiendo desde el principio…",
@@ -140,6 +141,32 @@ export function KidStoryScreen({ kidStoryId }: { kidStoryId: string }) {
     } catch {
       // clipboard API can fail in some browsers/permissions — silent
     }
+  }
+
+  async function uploadSceneImage(sceneIndex: number, file: File) {
+    if (!story || !story.imagePrompts) return;
+    if (!file.type.startsWith("image/")) return;
+    // Resize on upload to keep IndexedDB lean and book pages snappy.
+    const { resizeImage } = await import("../lib/image");
+    const resized = await resizeImage(file, 1600, 0.9);
+    const nextScenes = story.imagePrompts.scenes.map((s, i) =>
+      i === sceneIndex ? { ...s, image: resized.blob, imageMimeType: resized.mimeType } : s,
+    );
+    await updateKidStory(story.id, {
+      imagePrompts: { ...story.imagePrompts, scenes: nextScenes },
+    });
+    await refresh();
+  }
+
+  async function removeSceneImage(sceneIndex: number) {
+    if (!story || !story.imagePrompts) return;
+    const nextScenes = story.imagePrompts.scenes.map((s, i) =>
+      i === sceneIndex ? { ...s, image: undefined, imageMimeType: undefined } : s,
+    );
+    await updateKidStory(story.id, {
+      imagePrompts: { ...story.imagePrompts, scenes: nextScenes },
+    });
+    await refresh();
   }
 
   if (!story) {
@@ -402,7 +429,7 @@ export function KidStoryScreen({ kidStoryId }: { kidStoryId: string }) {
                       key={i}
                       className="rounded-3xl bg-gradient-to-br from-sky-soft/60 via-white to-grape-soft/40 border-2 border-white shadow-md px-5 py-4"
                     >
-                      <div className="flex items-baseline justify-between gap-3 mb-2">
+                      <div className="flex items-baseline justify-between gap-3 mb-3">
                         <div className="flex items-baseline gap-3">
                           <span className="size-7 rounded-full bg-grape text-white flex items-center justify-center text-sm h-display font-bold shrink-0">
                             {i + 1}
@@ -420,8 +447,16 @@ export function KidStoryScreen({ kidStoryId }: { kidStoryId: string }) {
                           {copiedKey === "scene-" + i ? "✓ Copiado" : "📋 Copiar"}
                         </button>
                       </div>
+
+                      <SceneImageSlot
+                        scene={scene}
+                        index={i}
+                        onUpload={uploadSceneImage}
+                        onRemove={removeSceneImage}
+                      />
+
                       <p
-                        className="text-sm text-night/85 leading-relaxed whitespace-pre-wrap"
+                        className="mt-3 text-sm text-night/85 leading-relaxed whitespace-pre-wrap"
                         style={{ fontFamily: "ui-monospace, SFMono-Regular, Consolas, monospace" }}
                       >
                         {scene.prompt}
@@ -446,7 +481,15 @@ export function KidStoryScreen({ kidStoryId }: { kidStoryId: string }) {
       )}
 
       {!editing && (
-        <div className="mt-10 flex justify-center">
+        <div className="mt-10 flex flex-wrap gap-3 justify-center">
+          <button
+            type="button"
+            onClick={() => go({ name: "kids-book", kidStoryId })}
+            className="btn-3d kid-button rounded-2xl bg-gradient-to-br from-sky to-grape text-white px-7 py-3 h-display font-semibold shadow-md"
+            style={{ borderBottomColor: "#3aa19a" }}
+          >
+            📖 Leer en libro
+          </button>
           <button
             type="button"
             onClick={regenerate}
@@ -463,4 +506,74 @@ export function KidStoryScreen({ kidStoryId }: { kidStoryId: string }) {
 
 function countWords(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
+}
+
+function SceneImageSlot({
+  scene,
+  index,
+  onUpload,
+  onRemove,
+}: {
+  scene: import("../db/types").KidStoryImagePromptScene;
+  index: number;
+  onUpload: (i: number, f: File) => void | Promise<void>;
+  onRemove: (i: number) => void | Promise<void>;
+}) {
+  const url = useObjectUrl(scene.image);
+  const inputId = `scene-img-${index}`;
+  if (url) {
+    return (
+      <div className="relative rounded-2xl overflow-hidden border-2 border-white shadow-sm">
+        <img src={url} alt="" className="block w-full h-auto" />
+        <div className="absolute top-2 right-2 flex gap-1">
+          <label
+            htmlFor={inputId}
+            className="rounded-full bg-night/70 backdrop-blur-sm text-white text-[11px] h-display font-semibold px-2.5 py-1 cursor-pointer hover:bg-night/80"
+          >
+            Cambiar
+          </label>
+          <button
+            type="button"
+            onClick={() => onRemove(index)}
+            className="rounded-full bg-night/70 backdrop-blur-sm text-white text-[11px] h-display font-semibold px-2.5 py-1 hover:bg-strawberry"
+          >
+            Quitar
+          </button>
+        </div>
+        <input
+          id={inputId}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) onUpload(index, f);
+            e.target.value = "";
+          }}
+        />
+      </div>
+    );
+  }
+  return (
+    <label
+      htmlFor={inputId}
+      className="block rounded-2xl border-2 border-dashed border-grape/30 bg-cloud/60 px-4 py-5 text-center cursor-pointer hover:bg-cloud hover:border-grape/60 transition"
+    >
+      <p className="h-display text-sm font-semibold text-grape">📥 Subir imagen para esta escena</p>
+      <p className="mt-1 text-xs text-night/55">
+        Pega el prompt en Gemini, descarga la imagen, y súbela aquí.
+      </p>
+      <input
+        id={inputId}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) onUpload(index, f);
+          e.target.value = "";
+        }}
+      />
+    </label>
+  );
 }

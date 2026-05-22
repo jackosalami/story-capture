@@ -20,7 +20,9 @@ export type Screen =
   | { name: "kids-new" }
   | { name: "kids-story"; kidStoryId: string }
   | { name: "kids-characters" }
-  | { name: "kids-character"; kidCharacterId: string };
+  | { name: "kids-character"; kidCharacterId: string }
+  | { name: "kids-shelf" }
+  | { name: "kids-book"; kidStoryId: string };
 
 interface NavStore {
   screen: Screen;
@@ -39,6 +41,8 @@ export function workspaceOf(screen: Screen): Workspace {
     case "kids-story":
     case "kids-characters":
     case "kids-character":
+    case "kids-shelf":
+    case "kids-book":
       return "kids";
     default:
       return "memoir";

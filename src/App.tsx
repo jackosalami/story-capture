@@ -15,6 +15,8 @@ import { NewKidStoryScreen } from "./screens/NewKidStoryScreen";
 import { KidStoryScreen } from "./screens/KidStoryScreen";
 import { KidCharactersScreen } from "./screens/KidCharactersScreen";
 import { KidCharacterScreen } from "./screens/KidCharacterScreen";
+import { BookshelfScreen } from "./screens/BookshelfScreen";
+import { BookReaderScreen } from "./screens/BookReaderScreen";
 
 function App() {
   const screen = useNav((s) => s.screen);
@@ -67,6 +69,10 @@ function App() {
       return <KidCharactersScreen />;
     case "kids-character":
       return <KidCharacterScreen kidCharacterId={screen.kidCharacterId} />;
+    case "kids-shelf":
+      return <BookshelfScreen />;
+    case "kids-book":
+      return <BookReaderScreen kidStoryId={screen.kidStoryId} />;
     default:
       return <DashboardScreen />;
   }

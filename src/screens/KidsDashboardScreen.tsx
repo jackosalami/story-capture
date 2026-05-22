@@ -58,7 +58,14 @@ export function KidsDashboardScreen() {
             <DragonMascot className="kid-avatar bob hidden sm:block w-28 h-28 shrink-0" />
           </div>
 
-          <nav className="mt-6 flex items-center gap-4 text-sm h-display font-medium">
+          <nav className="mt-6 flex flex-wrap items-center gap-2 text-sm h-display font-medium">
+            <button
+              type="button"
+              onClick={() => go({ name: "kids-shelf" })}
+              className="rounded-full bg-white/80 border border-night/10 px-4 py-1.5 text-night hover:bg-white shadow-sm"
+            >
+              📚 Mi librero
+            </button>
             <button
               type="button"
               onClick={() => go({ name: "kids-characters" })}

@@ -37,6 +37,20 @@ export async function generateImagePrompts(args: {
     });
     const parsed = parseImagePromptsResponse(raw);
     if (!parsed) return false;
+    // Preserve any images already uploaded for the same scene index so a
+    // regenerate doesn't wipe the user's illustrations.
+    const prior = args.story.imagePrompts?.scenes ?? [];
+    parsed.scenes = parsed.scenes.map((scene, i) => {
+      const oldScene = prior[i];
+      if (oldScene?.image) {
+        return {
+          ...scene,
+          image: oldScene.image,
+          imageMimeType: oldScene.imageMimeType,
+        };
+      }
+      return scene;
+    });
     await updateKidStory(args.story.id, { imagePrompts: parsed });
     return true;
   } catch {
