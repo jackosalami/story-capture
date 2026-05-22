@@ -4,8 +4,33 @@ import { createKidCharacter, listKidCharacters } from "../db/kidCharacters";
 import { listKidStories } from "../db/kidStories";
 import type { KidCharacter, KidCharacterKind } from "../db/types";
 import { avatarForKind, colorForKind } from "../components/Mascots";
+import { CharacterImageUpload } from "../components/CharacterImageUpload";
+import { useObjectUrl } from "../lib/useObjectUrl";
 
 const KIND_OPTIONS: KidCharacterKind[] = ["niño", "animal", "criatura", "objeto mágico", "otro"];
+
+function ListAvatar({ character, colorBg }: { character: KidCharacter; colorBg: string }) {
+  const url = useObjectUrl(character.image);
+  if (url) {
+    return (
+      <img
+        src={url}
+        alt=""
+        className="size-14 rounded-full object-cover border-2 border-white shadow-sm"
+      />
+    );
+  }
+  return (
+    <span
+      className={
+        "size-14 rounded-full border-2 border-white shadow-sm flex items-center justify-center text-3xl " +
+        colorBg
+      }
+    >
+      {avatarForKind(character.kind)}
+    </span>
+  );
+}
 
 export function KidCharactersScreen() {
   const go = useNav((s) => s.go);
@@ -15,6 +40,8 @@ export function KidCharactersScreen() {
   const [newName, setNewName] = useState("");
   const [newKind, setNewKind] = useState<KidCharacterKind>("niño");
   const [newDescription, setNewDescription] = useState("");
+  const [newImage, setNewImage] = useState<Blob | undefined>(undefined);
+  const [newImageMime, setNewImageMime] = useState<string | undefined>(undefined);
 
   async function refresh() {
     const [chars, stories] = await Promise.all([
@@ -39,10 +66,14 @@ export function KidCharactersScreen() {
       name: newName,
       kind: newKind,
       description: newDescription.trim(),
+      image: newImage,
+      imageMimeType: newImageMime,
     });
     setNewName("");
     setNewKind("niño");
     setNewDescription("");
+    setNewImage(undefined);
+    setNewImageMime(undefined);
     setShowCreate(false);
     await refresh();
   }
@@ -87,14 +118,7 @@ export function KidCharactersScreen() {
                   className="kid-card block w-full text-left rounded-3xl px-5 py-4"
                 >
                   <div className="flex items-start gap-4">
-                    <span
-                      className={
-                        "size-14 rounded-full border-2 border-white shadow-sm flex items-center justify-center text-3xl " +
-                        color.bg
-                      }
-                    >
-                      {avatarForKind(c.kind)}
-                    </span>
+                    <ListAvatar character={c} colorBg={color.bg} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-baseline justify-between gap-3">
                         <span className="h-display text-xl text-night truncate">{c.name}</span>
@@ -119,7 +143,19 @@ export function KidCharactersScreen() {
 
       <div className="mt-10">
         {showCreate ? (
-          <div className="rounded-3xl bg-white border-2 border-night/10 p-5 space-y-3 shadow-sm">
+          <div className="rounded-3xl bg-white border-2 border-night/10 p-5 space-y-4 shadow-sm">
+            <CharacterImageUpload
+              existingImage={newImage}
+              existingMimeType={newImageMime}
+              onImageChange={(blob, mime) => {
+                setNewImage(blob);
+                setNewImageMime(mime);
+              }}
+              onDescribed={({ description, suggestedKind }) => {
+                if (!newDescription.trim()) setNewDescription(description);
+                setNewKind(suggestedKind);
+              }}
+            />
             <label className="block">
               <span className="h-display text-sm font-semibold text-night/80">Nombre</span>
               <input
@@ -163,7 +199,13 @@ export function KidCharactersScreen() {
               </button>
               <button
                 type="button"
-                onClick={() => { setShowCreate(false); setNewName(""); setNewDescription(""); }}
+                onClick={() => {
+                  setShowCreate(false);
+                  setNewName("");
+                  setNewDescription("");
+                  setNewImage(undefined);
+                  setNewImageMime(undefined);
+                }}
                 className="rounded-2xl px-3 py-2 text-sm text-night/60 hover:text-night"
               >
                 Cancelar

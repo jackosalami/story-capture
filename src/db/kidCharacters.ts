@@ -6,6 +6,8 @@ export interface KidCharacterDraft {
   kind?: KidCharacterKind;
   description?: string;
   traits?: string[];
+  image?: Blob;
+  imageMimeType?: string;
 }
 
 export async function createKidCharacter(draft: KidCharacterDraft): Promise<KidCharacter> {
@@ -16,6 +18,8 @@ export async function createKidCharacter(draft: KidCharacterDraft): Promise<KidC
     description: draft.description ?? "",
     traits: draft.traits ?? [],
     createdAt: new Date().toISOString(),
+    image: draft.image,
+    imageMimeType: draft.imageMimeType,
   };
   await db.kidCharacters.add(character);
   return character;

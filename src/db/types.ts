@@ -82,6 +82,8 @@ export interface KidCharacter {
   description: string; // physical + personality, free text
   traits: string[]; // valiente, curioso, tímido, etc.
   createdAt: string;
+  image?: Blob;           // optional uploaded reference photo
+  imageMimeType?: string; // e.g. "image/jpeg"
 }
 
 export type AgeBand = "3-5" | "6-8" | "9-12";

@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { createKidCharacter, listKidCharacters } from "../db/kidCharacters";
 import type { KidCharacter, KidCharacterKind } from "../db/types";
 import { avatarForKind, colorForKind } from "./Mascots";
+import { CharacterImageUpload } from "./CharacterImageUpload";
+import { useObjectUrl } from "../lib/useObjectUrl";
 
 interface Props {
   selectedIds: string[];
@@ -10,12 +12,45 @@ interface Props {
 
 const KIND_OPTIONS: KidCharacterKind[] = ["niño", "animal", "criatura", "objeto mágico", "otro"];
 
+function CharacterAvatar({
+  character,
+  selected,
+  colorBg,
+}: {
+  character: KidCharacter;
+  selected: boolean;
+  colorBg: string;
+}) {
+  const url = useObjectUrl(character.image);
+  if (url) {
+    return (
+      <img
+        src={url}
+        alt=""
+        className="size-9 rounded-full object-cover border-2 border-white/70 shrink-0"
+      />
+    );
+  }
+  return (
+    <span
+      className={
+        "size-9 rounded-full flex items-center justify-center text-xl shrink-0 " +
+        (selected ? "bg-white/20" : colorBg)
+      }
+    >
+      {avatarForKind(character.kind)}
+    </span>
+  );
+}
+
 export function KidCharacterPicker({ selectedIds, onChange }: Props) {
   const [characters, setCharacters] = useState<KidCharacter[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
   const [newKind, setNewKind] = useState<KidCharacterKind>("niño");
   const [newDescription, setNewDescription] = useState("");
+  const [newImage, setNewImage] = useState<Blob | undefined>(undefined);
+  const [newImageMime, setNewImageMime] = useState<string | undefined>(undefined);
   const [saving, setSaving] = useState(false);
 
   async function refresh() {
@@ -29,6 +64,15 @@ export function KidCharacterPicker({ selectedIds, onChange }: Props) {
       : [...selectedIds, id]);
   }
 
+  function resetForm() {
+    setNewName("");
+    setNewKind("niño");
+    setNewDescription("");
+    setNewImage(undefined);
+    setNewImageMime(undefined);
+    setShowCreate(false);
+  }
+
   async function saveNew() {
     const name = newName.trim();
     if (!name) return;
@@ -37,11 +81,10 @@ export function KidCharacterPicker({ selectedIds, onChange }: Props) {
       name,
       kind: newKind,
       description: newDescription.trim(),
+      image: newImage,
+      imageMimeType: newImageMime,
     });
-    setNewName("");
-    setNewKind("niño");
-    setNewDescription("");
-    setShowCreate(false);
+    resetForm();
     setSaving(false);
     await refresh();
     onChange([...selectedIds, c.id]);
@@ -66,14 +109,8 @@ export function KidCharacterPicker({ selectedIds, onChange }: Props) {
                     : "bg-white text-night border-night/10 hover:border-grape")
                 }
               >
-                <span
-                  className={
-                    "size-9 rounded-full flex items-center justify-center text-xl shrink-0 " +
-                    (selected ? "bg-white/20" : color.bg)
-                  }
-                >
-                  {avatarForKind(c.kind)}
-                </span>
+                <CharacterAvatar character={c} selected={selected} colorBg={color.bg} />
+
                 <span className="flex flex-col min-w-0">
                   <span className="h-display text-sm font-semibold truncate">{c.name}</span>
                   <span className={"text-[10px] uppercase tracking-wider " + (selected ? "text-white/80" : "text-night/55")}>
@@ -88,6 +125,19 @@ export function KidCharacterPicker({ selectedIds, onChange }: Props) {
 
       {showCreate ? (
         <div className="rounded-2xl border-2 border-night/10 bg-white p-4 space-y-3 shadow-sm">
+          <CharacterImageUpload
+            existingImage={newImage}
+            existingMimeType={newImageMime}
+            onImageChange={(blob, mime) => {
+              setNewImage(blob);
+              setNewImageMime(mime);
+            }}
+            onDescribed={({ description, suggestedKind }) => {
+              if (!newDescription.trim()) setNewDescription(description);
+              setNewKind(suggestedKind);
+            }}
+          />
+
           <label className="block">
             <span className="h-display text-xs font-semibold text-night/80">Nombre</span>
             <input
@@ -112,11 +162,11 @@ export function KidCharacterPicker({ selectedIds, onChange }: Props) {
             </select>
           </label>
           <label className="block">
-            <span className="h-display text-xs font-semibold text-night/80">¿Cómo es? (opcional)</span>
+            <span className="h-display text-xs font-semibold text-night/80">¿Cómo es?</span>
             <textarea
               value={newDescription}
               onChange={(e) => setNewDescription(e.target.value)}
-              rows={2}
+              rows={3}
               placeholder="Un zorro pequeño, muy curioso, que siempre lleva una bufanda roja."
               className="mt-1 w-full rounded-xl border-2 border-night/10 px-3 py-2 text-sm focus:outline-none focus:border-grape focus:ring-2 focus:ring-grape/20"
             />
@@ -133,11 +183,7 @@ export function KidCharacterPicker({ selectedIds, onChange }: Props) {
             </button>
             <button
               type="button"
-              onClick={() => {
-                setShowCreate(false);
-                setNewName("");
-                setNewDescription("");
-              }}
+              onClick={resetForm}
               className="rounded-xl px-3 py-2 text-sm text-night/60 hover:text-night"
             >
               Cancelar

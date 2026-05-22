@@ -48,6 +48,54 @@ export async function chat(args: {
   return content.trim();
 }
 
+// Vision chat — accepts text + a single image. Used to describe uploaded
+// character reference photos.
+export async function chatWithImage(args: {
+  model: string;
+  systemPrompt: string;
+  userText: string;
+  imageDataUrl: string;
+  detail?: "low" | "high" | "auto";
+  temperature?: number;
+  maxTokens?: number;
+}): Promise<string> {
+  const res = await fetch(`${BASE}/chat/completions`, {
+    method: "POST",
+    headers: {
+      ...authHeaders(),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: args.model,
+      messages: [
+        { role: "system", content: args.systemPrompt },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: args.userText },
+            {
+              type: "image_url",
+              image_url: { url: args.imageDataUrl, detail: args.detail ?? "low" },
+            },
+          ],
+        },
+      ],
+      temperature: args.temperature ?? 0.5,
+      max_tokens: args.maxTokens,
+    }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`OpenAI vision chat error (${res.status}): ${text}`);
+  }
+  const json = await res.json();
+  const content = json.choices?.[0]?.message?.content;
+  if (typeof content !== "string") {
+    throw new Error("OpenAI vision chat: respuesta sin contenido.");
+  }
+  return content.trim();
+}
+
 export async function transcribe(args: {
   model: string;
   blob: Blob;

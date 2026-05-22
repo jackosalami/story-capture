@@ -8,8 +8,33 @@ import {
 import { listKidStories } from "../db/kidStories";
 import type { KidCharacter, KidCharacterKind, KidStory } from "../db/types";
 import { avatarForKind, colorForKind } from "../components/Mascots";
+import { CharacterImageUpload } from "../components/CharacterImageUpload";
+import { useObjectUrl } from "../lib/useObjectUrl";
 
 const KIND_OPTIONS: KidCharacterKind[] = ["niño", "animal", "criatura", "objeto mágico", "otro"];
+
+function DetailAvatar({ character, colorBg }: { character: KidCharacter; colorBg: string }) {
+  const url = useObjectUrl(character.image);
+  if (url) {
+    return (
+      <img
+        src={url}
+        alt=""
+        className="size-24 rounded-full object-cover border-4 border-white shadow-md"
+      />
+    );
+  }
+  return (
+    <span
+      className={
+        "size-24 rounded-full border-4 border-white shadow-md flex items-center justify-center text-5xl " +
+        colorBg
+      }
+    >
+      {avatarForKind(character.kind)}
+    </span>
+  );
+}
 
 export function KidCharacterScreen({ kidCharacterId }: { kidCharacterId: string }) {
   const go = useNav((s) => s.go);
@@ -19,6 +44,8 @@ export function KidCharacterScreen({ kidCharacterId }: { kidCharacterId: string 
   const [name, setName] = useState("");
   const [kind, setKind] = useState<KidCharacterKind>("niño");
   const [description, setDescription] = useState("");
+  const [image, setImage] = useState<Blob | undefined>(undefined);
+  const [imageMime, setImageMime] = useState<string | undefined>(undefined);
 
   async function refresh() {
     const c = await getKidCharacter(kidCharacterId);
@@ -27,6 +54,8 @@ export function KidCharacterScreen({ kidCharacterId }: { kidCharacterId: string 
     setName(c.name);
     setKind(c.kind);
     setDescription(c.description);
+    setImage(c.image);
+    setImageMime(c.imageMimeType);
     const all = await listKidStories();
     setStories(all.filter((s) => s.protagonistIds.includes(kidCharacterId)));
   }
@@ -37,6 +66,8 @@ export function KidCharacterScreen({ kidCharacterId }: { kidCharacterId: string 
       name: name.trim(),
       kind,
       description: description.trim(),
+      image,
+      imageMimeType: imageMime,
     });
     setEditing(false);
     await refresh();
@@ -81,6 +112,18 @@ export function KidCharacterScreen({ kidCharacterId }: { kidCharacterId: string 
 
       {editing ? (
         <div className="space-y-4">
+          <CharacterImageUpload
+            existingImage={image}
+            existingMimeType={imageMime}
+            onImageChange={(blob, mime) => {
+              setImage(blob);
+              setImageMime(mime);
+            }}
+            onDescribed={({ description: desc, suggestedKind }) => {
+              setDescription(desc);
+              setKind(suggestedKind);
+            }}
+          />
           <input
             type="text"
             value={name}
@@ -131,14 +174,7 @@ export function KidCharacterScreen({ kidCharacterId }: { kidCharacterId: string 
       ) : (
         <>
           <div className="flex items-center gap-5 mb-6">
-            <span
-              className={
-                "size-24 rounded-full border-4 border-white shadow-md flex items-center justify-center text-5xl " +
-                color.bg
-              }
-            >
-              {avatarForKind(character.kind)}
-            </span>
+            <DetailAvatar character={character} colorBg={color.bg} />
             <div>
               <h1 className="h-display text-4xl text-night leading-tight">{character.name}</h1>
               <span className={"inline-block mt-2 text-xs rounded-full px-3 py-1 font-semibold h-display " + color.bg + " " + color.text}>
