@@ -96,13 +96,16 @@ export interface KidStory {
   setting: string;
   theme: string;
   ageBand: AgeBand;
-  language: StoryLanguage; // language the prose is written in
+  language: StoryLanguage; // primary language the prose was written in
   forChild: string;
   targetWords: number;
-  content: string; // generated prose in the chosen language
+  content: string; // primary prose in `language`
   editHistory: { at: string; content: string }[];
   createdAt: string;
   imagePrompts?: KidStoryImagePrompts;
+  // Optional translations of title + content into other languages.
+  // Images, scene metadata, and English image prompts are reused as-is.
+  translations?: Partial<Record<StoryLanguage, { title: string; content: string; translatedAt: string }>>;
 }
 
 export interface KidStoryImagePromptScene {

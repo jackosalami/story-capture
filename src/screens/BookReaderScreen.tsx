@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useNav } from "../store/nav";
 import { getKidStory } from "../db/kidStories";
 import { getKidCharactersByIds } from "../db/kidCharacters";
-import type { KidCharacter, KidStory } from "../db/types";
+import type { KidCharacter, KidStory, StoryLanguage } from "../db/types";
 import { splitStoryIntoSections } from "../lib/splitStory";
 import { useObjectUrl } from "../lib/useObjectUrl";
+import { availableLanguages, getStoryInLanguage } from "../lib/translateStory";
 
 // A book reader without any external library. Each "spread" is one screen:
 // cover (alone), then 5× (image left + text right), then back cover (alone).
@@ -27,6 +28,7 @@ export function BookReaderScreen({ kidStoryId }: { kidStoryId: string }) {
   const [cast, setCast] = useState<KidCharacter[]>([]);
   const [current, setCurrent] = useState(0);
   const [direction, setDirection] = useState<"next" | "prev">("next");
+  const [viewLanguage, setViewLanguage] = useState<StoryLanguage | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -34,13 +36,16 @@ export function BookReaderScreen({ kidStoryId }: { kidStoryId: string }) {
       if (!s) return;
       setStory(s);
       setCast(await getKidCharactersByIds(s.protagonistIds));
+      setViewLanguage(s.language);
     })();
   }, [kidStoryId]);
 
   const spreads = useMemo<Spread[]>(() => {
     if (!story) return [];
     const sceneCount = story.imagePrompts?.scenes.length ?? 5;
-    const sections = splitStoryIntoSections(story.content, sceneCount);
+    const lang = viewLanguage ?? story.language;
+    const { content } = getStoryInLanguage(story, lang);
+    const sections = splitStoryIntoSections(content, sceneCount);
     const out: Spread[] = [{ kind: "cover" }];
     for (let i = 0; i < sceneCount; i++) {
       out.push({
@@ -54,7 +59,7 @@ export function BookReaderScreen({ kidStoryId }: { kidStoryId: string }) {
     }
     out.push({ kind: "back" });
     return out;
-  }, [story]);
+  }, [story, viewLanguage]);
 
   function next() {
     if (current >= spreads.length - 1) return;
@@ -90,7 +95,7 @@ export function BookReaderScreen({ kidStoryId }: { kidStoryId: string }) {
 
   return (
     <div className="min-h-svh flex flex-col bg-gradient-to-b from-grape-soft/30 via-cloud to-sun-soft/20">
-      <header className="flex items-center justify-between px-5 py-4">
+      <header className="flex items-center justify-between gap-3 px-5 py-4">
         <button
           type="button"
           onClick={() => go({ name: "kids-shelf" })}
@@ -98,10 +103,30 @@ export function BookReaderScreen({ kidStoryId }: { kidStoryId: string }) {
         >
           ← Cerrar libro
         </button>
-        <span className="text-xs text-night/50 h-display uppercase tracking-widest font-semibold">
+        <span className="hidden sm:inline text-xs text-night/50 h-display uppercase tracking-widest font-semibold">
           {labelFor(spread)}
         </span>
-        <div className="w-[110px]" />
+        {availableLanguages(story).length > 1 ? (
+          <div className="inline-flex rounded-full bg-white/90 border border-night/10 p-0.5 text-xs h-display font-semibold shadow-sm">
+            {availableLanguages(story).map((lang) => (
+              <button
+                key={lang}
+                type="button"
+                onClick={() => setViewLanguage(lang)}
+                className={
+                  "rounded-full px-2.5 py-1 transition " +
+                  ((viewLanguage ?? story.language) === lang
+                    ? "bg-grape text-white"
+                    : "text-night hover:text-grape")
+                }
+              >
+                {lang === "es" ? "🇪🇸" : "🇺🇸"}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="w-[110px]" />
+        )}
       </header>
 
       <div

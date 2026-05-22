@@ -16,6 +16,13 @@ import {
 } from "../prompts/kidStory";
 import { generateImagePrompts } from "../lib/generateImagePrompts";
 import { augmentCastForPrompt } from "../lib/characterDefaults";
+import {
+  translateStory,
+  getStoryInLanguage,
+  availableLanguages,
+} from "../lib/translateStory";
+import { shareBook, downloadBookHtml } from "../lib/shareBook";
+import type { StoryLanguage } from "../db/types";
 import { Sparkle, StarMascot, avatarForKind } from "../components/Mascots";
 import { useObjectUrl } from "../lib/useObjectUrl";
 
@@ -41,6 +48,12 @@ export function KidStoryScreen({ kidStoryId }: { kidStoryId: string }) {
   const [imagePromptsBusy, setImagePromptsBusy] = useState(false);
   const [imagePromptsError, setImagePromptsError] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [viewLanguage, setViewLanguage] = useState<StoryLanguage | null>(null);
+  const [translating, setTranslating] = useState<StoryLanguage | null>(null);
+  const [translateError, setTranslateError] = useState<string | null>(null);
+  const [sharing, setSharing] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [shareError, setShareError] = useState<string | null>(null);
 
   async function refresh() {
     const s = await getKidStory(kidStoryId);
@@ -49,6 +62,7 @@ export function KidStoryScreen({ kidStoryId }: { kidStoryId: string }) {
     setDraftTitle(s.title);
     setDraftContent(s.content);
     setCast(await getKidCharactersByIds(s.protagonistIds));
+    setViewLanguage((vl) => vl ?? s.language);
   }
   useEffect(() => { refresh(); }, [kidStoryId]);
 
@@ -176,6 +190,54 @@ export function KidStoryScreen({ kidStoryId }: { kidStoryId: string }) {
     await refresh();
   }
 
+  async function doShareBook() {
+    if (!story) return;
+    setShareError(null);
+    setShareUrl(null);
+    setSharing(true);
+    try {
+      const url = await shareBook({
+        story,
+        cast,
+        language: viewLanguage ?? story.language,
+      });
+      setShareUrl(url);
+    } catch {
+      setShareError(
+        "No se pudo subir el libro automáticamente. Descárgalo y compártelo como archivo HTML.",
+      );
+      try {
+        await downloadBookHtml({
+          story,
+          cast,
+          language: viewLanguage ?? story.language,
+        });
+      } catch {
+        /* swallow */
+      }
+    } finally {
+      setSharing(false);
+    }
+  }
+
+  async function doTranslate(to: StoryLanguage) {
+    if (!story) return;
+    setTranslateError(null);
+    setTranslating(to);
+    const ok = await translateStory({ storyId: story.id, toLanguage: to, model: chapterModel });
+    if (!ok) {
+      setTranslateError(
+        to === "en"
+          ? "No se pudo traducir al inglés. Inténtalo de nuevo."
+          : "No se pudo traducir al español. Inténtalo de nuevo.",
+      );
+    } else {
+      setViewLanguage(to);
+    }
+    setTranslating(null);
+    await refresh();
+  }
+
   async function uploadAllSceneImages(files: FileList) {
     if (!story || !story.imagePrompts) return;
     // Sort files by name so 1.png → slot 1, 2.png → slot 2, etc.
@@ -228,8 +290,14 @@ export function KidStoryScreen({ kidStoryId }: { kidStoryId: string }) {
     );
   }
 
-  const wordCount = countWords(story.content);
+  // The active viewing language drives what title + content show on the page.
+  const activeLanguage = viewLanguage ?? story.language;
+  const view = getStoryInLanguage(story, activeLanguage);
+  const wordCount = countWords(view.content);
   const readMinutes = Math.max(1, Math.round(wordCount / 140));
+  const availableLangs = availableLanguages(story);
+  const otherLanguage: StoryLanguage = activeLanguage === "es" ? "en" : "es";
+  const hasOtherLanguage = availableLangs.includes(otherLanguage);
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-10">
@@ -296,6 +364,98 @@ export function KidStoryScreen({ kidStoryId }: { kidStoryId: string }) {
         </div>
       ) : (
         <>
+          {/* Language + share toolbar */}
+          <div className="mb-6 flex flex-wrap items-center gap-2">
+            {/* Language toggle (only if a translation exists) */}
+            {availableLangs.length > 1 && (
+              <div className="inline-flex rounded-full bg-white/80 border border-night/10 p-1 text-xs h-display font-semibold shadow-sm">
+                {availableLangs.map((lang) => (
+                  <button
+                    key={lang}
+                    type="button"
+                    onClick={() => setViewLanguage(lang)}
+                    className={
+                      "rounded-full px-3 py-1.5 transition " +
+                      (activeLanguage === lang
+                        ? "bg-grape text-white"
+                        : "text-night hover:text-grape")
+                    }
+                  >
+                    {lang === "es" ? "🇪🇸 Español" : "🇺🇸 English"}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Translate to the other language (only if not already available) */}
+            {!hasOtherLanguage && (
+              <button
+                type="button"
+                onClick={() => doTranslate(otherLanguage)}
+                disabled={translating !== null}
+                className="rounded-full bg-white/80 border border-night/10 px-3 py-1.5 text-xs h-display font-semibold text-night hover:bg-white shadow-sm disabled:opacity-50"
+              >
+                {translating
+                  ? "Traduciendo…"
+                  : otherLanguage === "en"
+                    ? "🌐 Traducir a inglés"
+                    : "🌐 Traducir a español"}
+              </button>
+            )}
+
+            {/* Share book */}
+            <button
+              type="button"
+              onClick={doShareBook}
+              disabled={sharing}
+              className="ml-auto btn-3d kid-button rounded-full bg-gradient-to-br from-sky to-grape text-white px-4 py-1.5 text-xs h-display font-semibold disabled:opacity-50"
+              style={{ borderBottomColor: "#3aa19a" }}
+            >
+              {sharing ? "Subiendo…" : "📤 Compartir libro"}
+            </button>
+          </div>
+
+          {translateError && (
+            <div className="mb-4 rounded-2xl bg-strawberry-soft border-2 border-strawberry/30 px-5 py-3 text-sm text-strawberry">
+              {translateError}
+            </div>
+          )}
+
+          {shareUrl && (
+            <div className="mb-6 rounded-2xl bg-sky-soft border-2 border-sky/40 px-5 py-4">
+              <p className="h-display text-sm font-semibold text-night mb-1">
+                ✅ ¡Libro subido! Aquí está tu link:
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <a
+                  href={shareUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-mono text-sm text-grape break-all underline-offset-2 hover:underline"
+                >
+                  {shareUrl}
+                </a>
+                <button
+                  type="button"
+                  onClick={() => navigator.clipboard?.writeText(shareUrl)}
+                  className="rounded-full bg-white border border-night/15 px-3 py-1 text-xs h-display font-medium text-night hover:border-grape"
+                >
+                  Copiar
+                </button>
+              </div>
+              <p className="mt-2 text-xs text-night/60">
+                Compártelo por WhatsApp / mail / lo que sea. Lo abren en cualquier navegador.
+                (El link en 0x0.st dura ~1 año para archivos pequeños.)
+              </p>
+            </div>
+          )}
+
+          {shareError && (
+            <div className="mb-6 rounded-2xl bg-strawberry-soft border-2 border-strawberry/30 px-5 py-3 text-sm text-strawberry">
+              {shareError}
+            </div>
+          )}
+
           {/* Storybook header */}
           <div className="relative rounded-3xl overflow-hidden mb-8 p-8 bg-gradient-to-br from-grape-soft via-strawberry-soft to-sun-soft border-2 border-white shadow-md">
             <Sparkle className="absolute top-4 right-6 w-5 h-5 text-strawberry blob-drift" />
@@ -314,7 +474,7 @@ export function KidStoryScreen({ kidStoryId }: { kidStoryId: string }) {
               </div>
             )}
             <h1 className="h-display text-3xl md:text-4xl text-night leading-tight">
-              {story.title || "Cuento"}
+              {view.title || "Cuento"}
             </h1>
             <div className="mt-3 flex flex-wrap gap-2 text-xs h-display font-semibold">
               <span className="rounded-full bg-white/80 px-3 py-1 text-night">
@@ -335,7 +495,7 @@ export function KidStoryScreen({ kidStoryId }: { kidStoryId: string }) {
           </div>
 
           <article className="rounded-3xl bg-white border-2 border-white shadow-md px-7 py-8 sm:px-10 sm:py-10">
-            {story.content.split(/\n{2,}/).map((para, i) => (
+            {view.content.split(/\n{2,}/).map((para, i) => (
               <p
                 key={i}
                 className="text-[19px] leading-[1.8] text-night/90 mb-5 whitespace-pre-wrap last:mb-0"
