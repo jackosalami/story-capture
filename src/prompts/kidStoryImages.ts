@@ -45,17 +45,19 @@ You will receive a CAST list in the user message — these are the named charact
 
 1. You MUST create one entry in the output "characters" array. The entry's "name" must match the cast name exactly (same spelling, same capitalization).
 
-2. You MUST write a concrete visual "description". If the cast hint includes a description, expand and refine it into a richer paragraph. If the hint is empty, invent a coherent visual identity based on the story text and what the character is (niño / animal / criatura / objeto mágico). The description must contain:
-   - what they are (species or type)
-   - approximate age or size
-   - hair / fur / feathers — color, texture, style. **HAIRSTYLE IS REQUIRED. State it explicitly (e.g. "two small pigtails on each side", "short messy bob", "long braid down the back"). If the hint specifies a hairstyle, use that EXACT hairstyle in every scene.**
-   - eye color
-   - skin tone (if applicable)
-   - clothing — every visible garment, with color and material
-   - accessories — hats, scarves, glasses, bags, jewelry, weapons-but-friendly, etc.
-   - any distinctive marks — freckles, scars, a missing tooth, a streak of color, etc.
+2. You MUST write a HYPER-SPECIFIC visual "description". The cast hint is BINDING: if it specifies a hairstyle, clothing, age, body shape, or any distinguishing feature, you MUST use that EXACT feature in your description and in every scene the character appears in. You may add concrete details that don't contradict the hint, but you may NEVER substitute or override a specified feature with a generic one. Example: if the hint says "two side pigtails," you MUST write "two side pigtails," not "curly hair" or "short hair" — even if other features are vague.
 
-3. **References to known characters or styles**: If the visual hint mentions a recognizable character, person, or style reference (e.g. "looks like Mei from My Neighbor Totoro", "Ghibli-style girl", "like the kid from Coco"), incorporate the canonical visual features of that reference into your description. Be specific — name the hair, the clothing, the body proportions associated with that reference. The reader of your prompt should not need to know the reference; your description must stand alone with all those features spelled out.
+   The description must contain ALL of these, each with concrete sensory specificity (avoid generic words like "colorful", "cute", "nice"):
+   - **What they are**: species or type (a four-year-old Spanish girl, a small russet-furred fox cub, a stuffed bunny doll)
+   - **Age and body**: specific age in years, height/build, posture
+   - **Hair / fur / feathers** — color (be specific: "chocolate brown," not "dark"), texture (silky, fluffy, wiry), and **EXACT hairstyle** (two side pigtails, low side bun, shaggy bowl cut, long braid past the waist). Hairstyle must be stated explicitly and is non-negotiable — use the SAME wording in every scene.
+   - **Eye color and shape** (almond-shaped dark brown eyes with thick lashes; round amber eyes with vertical pupils)
+   - **Skin tone or fur/coat tone** (warm tan complexion; cream-and-rust patchwork fur)
+   - **Clothing — every visible garment with COLOR + MATERIAL + DISTINCTIVE DETAIL**. Don't say "a colorful shirt" — say "a pale-yellow short-sleeved cotton blouse with a small white peter-pan collar." Don't say "shorts" — say "dark navy denim shorts that fall just above her knees." Specific is the goal.
+   - **Accessories** — every visible item: hairband color, sock color, shoe style, backpack, scarf pattern, glasses shape.
+   - **Distinguishing marks** — freckles across the nose bridge, a missing front tooth, a small scar on the eyebrow, a streak of silver in the hair, etc. Invent one or two if the hint is silent — it helps the model recognize them.
+
+3. **References to known characters or styles**: If the visual hint mentions a recognizable character, person, or style reference (e.g. "looks like Mei from My Neighbor Totoro," "Ghibli-style girl," "like the kid from Coco," "modeled visually on..."), incorporate the canonical visual features of that reference into your description. Be specific — name the hair, the clothing, the body proportions associated with that reference. The reader of your prompt should not need to know the reference; your description must stand alone with all those features spelled out as if you were describing the character from scratch.
 
 4. **Personality traits inform body language**: If the cast hint includes personality traits (curious, shy, brave, dreamy, mischievous, etc.), let those traits show in each scene's posture, expression, and what the character is doing. A curious character peers, reaches, leans in. A shy character hides behind something, looks down. A brave character stands tall, leads the others. Don't just say the character is "X" — render the trait visually in their body.
 

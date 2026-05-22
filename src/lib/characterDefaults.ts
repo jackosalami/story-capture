@@ -13,35 +13,45 @@ import type { KidCharacter } from "../db/types";
 interface CharacterDefault {
   // Matches the character by name, case-insensitive, trimmed.
   matchName: (name: string) => boolean;
-  // Skip augmenting if the existing description already contains any of these
-  // case-insensitive keywords — the user already specified the look.
+  // Skip the override entirely if the existing description already contains any
+  // of these keywords — the user has explicitly customized this character.
   skipIfMentions: string[];
-  // Visual snippet to append onto the description hint sent to the AI.
-  visualHint: string;
+  // Canonical visual that REPLACES the saved description on the way to the AI.
+  // Traits + kind still come from the saved character. The visual identity is
+  // anchored here so storyteller-specific recurring characters render the
+  // same in every image. The user can override by editing the saved
+  // description to include any skipIfMentions keyword.
+  canonicalVisual: string;
 }
 
 const DEFAULTS: CharacterDefault[] = [
   {
+    // Cami — the storyteller's recurring child character. Visual reference:
+    // Mei Kusakabe from Studio Ghibli's "My Neighbor Totoro". Anchored on the
+    // iconic two-side-pigtails hairstyle which is non-negotiable.
     matchName: (n) => n.trim().toLowerCase() === "cami",
-    skipIfMentions: ["mei", "totoro", "coletas", "coleta", "pigtail", "trenzas"],
-    visualHint:
-      // Visual reference: Mei Kusakabe from Studio Ghibli's "My Neighbor Totoro".
-      // Anchored on the iconic two-side-pigtails look the storyteller requested.
-      "Looks like a Spanish-speaking version of Mei Kusakabe from Studio Ghibli's 'My Neighbor Totoro': a small girl around four or five years old, round face with rosy cheeks, large expressive curious dark eyes, short brown hair always tied in two small pigtails on each side of her head (this hairstyle is iconic and must be drawn every single time), light tan complexion, often wearing a sunny pale-yellow short-sleeved blouse with a small white peter-pan collar, navy or denim shorts, and small canvas shoes. Energetic, curious posture, often peering at things with wide-eyed wonder. This visual MUST be preserved verbatim in every illustration.",
+    skipIfMentions: [
+      "no-mei", "override", // explicit user opt-outs
+    ],
+    canonicalVisual:
+      "A small Spanish-speaking girl around four years old, modeled visually on Mei Kusakabe from Studio Ghibli's 'My Neighbor Totoro'. " +
+      "HAIRSTYLE (mandatory, identical in every single illustration): chocolate-brown hair parted in the middle and gathered into TWO short pigtails, one tied on each side of her head with small soft elastic bands, the pigtail ends fluffing out just below her ears. Never loose, never one ponytail, never braids — always two short side pigtails. " +
+      "FACE: round face with full rosy cheeks, large dark brown almond-shaped eyes with thick dark lashes, small button nose, wide expressive mouth that smiles easily, a tiny chin. " +
+      "BODY: short for her age, sturdy and energetic, light-tan complexion. " +
+      "OUTFIT: a sunny pale-yellow short-sleeved blouse with a small white peter-pan collar, dark navy denim shorts that fall just above her knees, small white socks, and worn canvas slip-on shoes. " +
+      "POSTURE & VIBE: curious and brave, often leaning forward with both hands on her knees to peer at something, or standing with feet planted apart like she's ready to march into an adventure. Bold body language despite her small size.",
   },
 ];
 
-// Returns an augmented copy of the cast — never mutates the originals.
-// Pure prompt-side augmentation: nothing is saved back to IndexedDB.
+// Returns a copy of the cast with canonical visuals applied where matched.
+// Never mutates the saved characters — only the prompt payload.
 export function augmentCastForPrompt(cast: KidCharacter[]): KidCharacter[] {
   return cast.map((c) => {
     const match = DEFAULTS.find((d) => d.matchName(c.name));
     if (!match) return c;
     const lower = c.description.toLowerCase();
     if (match.skipIfMentions.some((kw) => lower.includes(kw))) return c;
-    const merged = c.description.trim()
-      ? `${c.description.trim()}\n\n[Auto-reference hint: ${match.visualHint}]`
-      : match.visualHint;
-    return { ...c, description: merged };
+    // Replace, not append. Saved traits + kind still come through.
+    return { ...c, description: match.canonicalVisual };
   });
 }
